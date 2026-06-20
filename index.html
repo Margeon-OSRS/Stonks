@@ -104,14 +104,14 @@
 <!-- ── GALAXY HUD ─────────────────────────────────────────────── -->
 <div id="gtop" class="hud panel">
   <div class="title">Void Command</div>
-  <div class="sub">GALACTIC SKIRMISH · MILESTONE 5</div>
+  <div class="sub">GALACTIC SKIRMISH · MILESTONE 6</div>
   <div class="row"><span>Credits <b id="gCred">0</b></span><span>Net <b id="gNet">+0</b>/day</span><span>Day <b id="gClock">1</b></span></div>
   <div class="force"><span class="dot" style="background:var(--player)"></span><span class="nm">Vanguard worlds</span><span class="ct" id="gP">0</span></div>
   <div class="force"><span class="dot" style="background:var(--enemy)"></span><span class="nm">Crimson worlds</span><span class="ct" id="gE">0</span></div>
 </div>
 <div id="ghelp" class="hud panel">
   <div><b>Click</b> one of your worlds to select it</div>
-  <div><span class="k">Right-click a linked world</span> — send its fleet</div>
+  <div><span class="k">Right-click any reachable world</span> — your fleet paths there</div>
   <div><b>Build</b>, <b>develop</b>, or <b>fortify</b> from the world panel · fleets cost upkeep</div>
 </div>
 <div id="gplanet" class="hud panel">
@@ -307,29 +307,51 @@ function newGalaxy(){
   const P=(name,nx,ny,owner,income)=>({id:0,name,nx,ny,x:0,y:0,owner,
     income,garrison:{fac:owner,units:[]},build:null,stationTier:0,refinery:false,shipyard:false,bomberbay:false});
   galaxy.planets=[
-    P('Helios',  0.10,0.50,'player',6),   // 0 player home
-    P('Tycho',   0.27,0.27,'player',3),   // 1
-    P('Rell',    0.27,0.73,'neutral',3),  // 2
-    P('Drift',   0.50,0.18,'neutral',3),  // 3
-    P('Meridian',0.50,0.50,'neutral',4),  // 4 central hub
-    P('Korr',    0.50,0.82,'neutral',3),  // 5
-    P('Cair',    0.73,0.27,'neutral',3),  // 6
-    P('Vex',     0.73,0.73,'enemy',3),    // 7
-    P('Ashfall', 0.90,0.50,'enemy',6),    // 8 enemy home
+    P('Helios',  0.06,0.50,'player',6),   // 0  player home
+    P('Tycho',   0.17,0.30,'player',3),   // 1
+    P('Rhea',    0.17,0.70,'player',3),   // 2
+    P('Drift',   0.29,0.14,'neutral',3),  // 3
+    P('Vault',   0.29,0.50,'neutral',3),  // 4
+    P('Mire',    0.29,0.86,'neutral',3),  // 5
+    P('Meridian',0.40,0.32,'neutral',3),  // 6
+    P('Tariq',   0.40,0.68,'neutral',3),  // 7
+    P('Nexus',   0.50,0.50,'neutral',4),  // 8  central hub
+    P('Cinder',  0.50,0.16,'neutral',3),  // 9
+    P('Hollow',  0.50,0.84,'neutral',3),  // 10
+    P('Spire',   0.60,0.32,'neutral',3),  // 11
+    P('Umbra',   0.60,0.68,'neutral',3),  // 12
+    P('Halcyon', 0.71,0.14,'neutral',3),  // 13
+    P('Bastion', 0.71,0.50,'neutral',3),  // 14
+    P('Korrin',  0.71,0.86,'neutral',3),  // 15
+    P('Cair',    0.83,0.30,'enemy',3),    // 16
+    P('Vex',     0.83,0.70,'enemy',3),    // 17
+    P('Ashfall', 0.94,0.50,'enemy',6),    // 18 enemy home
   ];
   galaxy.planets.forEach((p,i)=>p.id=i);   // ids must match lane indices below
-  galaxy.lanes=[ [0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[5,7],[6,8],[7,8] ];
-  galaxy.transits=[]; galaxy.credits={player:220,enemy:220};
-  galaxy.time=0; galaxy.selected=null; galaxy.ended=false; galaxy.aiBuild=4; galaxy.aiAttack=8;
+  galaxy.lanes=[
+    [0,1],[0,2],[1,2],
+    [1,3],[1,4],[2,4],[2,5],
+    [3,6],[4,6],[4,7],[5,7],[6,7],
+    [3,9],[5,10],
+    [6,8],[7,8],[6,9],[7,10],
+    [8,9],[8,10],[8,11],[8,12],[8,14],
+    [9,11],[10,12],[11,12],
+    [11,13],[11,14],[12,14],[12,15],[13,14],[14,15],
+    [13,16],[14,16],[14,17],[15,17],
+    [16,17],[16,18],[17,18],
+  ];
+  galaxy.transits=[]; galaxy.credits={player:240,enemy:240};
+  galaxy.time=0; galaxy.selected=null; galaxy.ended=false; galaxy.aiBuild=3; galaxy.aiAttack=5;
 
-  const stock=(p,list)=>{ for(const k of list) p.garrison.units.push(makeInstance(k,p.owner)); };
-  stock(galaxy.planets[0],['capital','frigate','frigate','fighter','fighter','fighter']);
-  stock(galaxy.planets[1],['frigate','fighter','fighter']);
-  stock(galaxy.planets[8],['capital','frigate','frigate','fighter','fighter','fighter']);
-  stock(galaxy.planets[7],['frigate','frigate','fighter','fighter','fighter']);
-  galaxy.planets[0].stationTier=2; galaxy.planets[8].stationTier=2;   // homeworld fortresses
-  galaxy.planets[1].stationTier=1; galaxy.planets[7].stationTier=1;   // forward platforms
-  galaxy.planets[0].shipyard=true; galaxy.planets[8].shipyard=true;   // homeworlds can build capitals
+  const stock=(i,list)=>{ for(const k of list) galaxy.planets[i].garrison.units.push(makeInstance(k,galaxy.planets[i].owner)); };
+  stock(0,['capital','frigate','frigate','fighter','fighter','fighter']);
+  stock(1,['frigate','fighter','fighter']); stock(2,['frigate','fighter','fighter']);
+  stock(18,['capital','frigate','frigate','fighter','fighter','fighter']);
+  stock(16,['frigate','fighter','fighter']); stock(17,['frigate','fighter','fighter']);
+  galaxy.planets[0].stationTier=2; galaxy.planets[18].stationTier=2;   // homeworld fortresses
+  galaxy.planets[1].stationTier=1; galaxy.planets[2].stationTier=1;
+  galaxy.planets[16].stationTier=1; galaxy.planets[17].stationTier=1;  // forward platforms
+  galaxy.planets[0].shipyard=true; galaxy.planets[18].shipyard=true;   // homeworlds can build capitals
   layoutGalaxy();
 }
 function layoutGalaxy(){
@@ -342,6 +364,24 @@ const neighbors=(p)=>galaxy.lanes.filter(l=>l[0]===p.id||l[1]===p.id)
   .map(l=>planetAt(l[0]===p.id?l[1]:l[0]));
 const linked=(a,b)=>galaxy.lanes.some(l=>(l[0]===a.id&&l[1]===b.id)||(l[0]===b.id&&l[1]===a.id));
 const planetRadius=p=>(p.income>=6?22:16);
+function bfsDist(srcId){                                  // hop distance from a world to every other
+  const d={[srcId]:0}, q=[srcId];
+  while(q.length){ const c=q.shift();
+    for(const nb of neighbors(planetAt(c))) if(d[nb.id]===undefined){ d[nb.id]=d[c]+1; q.push(nb.id); } }
+  return d;
+}
+function pathTo(srcId,dstId){                             // shortest lane route, inclusive of both ends
+  if(srcId===dstId) return [srcId];
+  const prev={}, seen=new Set([srcId]), q=[srcId];
+  while(q.length){ const c=q.shift();
+    for(const nb of neighbors(planetAt(c))){
+      if(seen.has(nb.id)) continue;
+      seen.add(nb.id); prev[nb.id]=c;
+      if(nb.id===dstId){ const path=[dstId]; let x=dstId; while(x!==srcId){ x=prev[x]; path.unshift(x); } return path; }
+      q.push(nb.id);
+    } }
+  return null;
+}
 function factionIncome(fac){ let s=0; for(const p of galaxy.planets) if(p.owner===fac) s+=incomeOf(p); return s; }
 function factionUpkeep(fac){ let s=0;                       // every fleet ship draws a little upkeep
   for(const p of galaxy.planets) for(const u of p.garrison.units) if(u.fac===fac) s+=TYPES[u.kind].upkeep||0;
@@ -368,10 +408,14 @@ function tryStruct(p,fac,key){
   galaxy.credits[fac]-=s.cost;
   p.build={kind:'struct',struct:key,t:s.time,total:s.time};
 }
-function sendFleet(from,to,fac){
+function sendFleet(from,to,fac,path){
   if(from.garrison.units.length===0) return;
-  galaxy.transits.push({fac,from:from.id,to:to.id,t:0,units:from.garrison.units});
+  galaxy.transits.push({fac,from:from.id,to:to.id,t:0,units:from.garrison.units,path:path||[]});
   from.garrison={fac:from.owner,units:[]};
+}
+function hopNext(fromP,fac,units,path){                  // launch the next leg of a multi-hop route
+  const next=path[0], rest=path.slice(1);
+  galaxy.transits.push({fac,from:fromP.id,to:next,t:0,units,path:rest});
 }
 
 const Galaxy={
@@ -383,7 +427,10 @@ const Galaxy={
       refreshPlanetPanel();
     } else if(e.button===2){
       const s=galaxy.selected;
-      if(s&&p&&p!==s&&linked(s,p)) sendFleet(s,p,'player');
+      if(s && p && p!==s && s.garrison.units.length){
+        const route=pathTo(s.id,p.id);                 // multi-hop: follow the shortest lane route
+        if(route && route.length>=2) sendFleet(s, planetAt(route[1]), 'player', route.slice(2));
+      }
     }
   },
   update(dt){
@@ -422,57 +469,73 @@ const Galaxy={
   draw(){ drawGalaxy(); },
 };
 
+function aiPickTarget(p, defPower){               // nearest non-enemy world; prefer free captures, then weakest
+  const d=bfsDist(p.id);
+  const cand=galaxy.planets.filter(q=>q.owner!=='enemy' && d[q.id]!==undefined);
+  if(!cand.length) return null;
+  cand.sort((a,b)=>{
+    const fa=defPower(a)===0?0:1, fb=defPower(b)===0?0:1;
+    if(fa!==fb) return fa-fb;                    // undefended worlds first (free expansion)
+    if(d[a.id]!==d[b.id]) return d[a.id]-d[b.id];// then nearest
+    return defPower(a)-defPower(b);              // then weakest
+  });
+  return cand[0];
+}
 function aiTick(dt){
-  // build
+  // ── build & develop: act on every idle world it can afford to ──
   galaxy.aiBuild-=dt;
-  if(galaxy.aiBuild<=0){ galaxy.aiBuild=rand(3,6);
-    const own=galaxy.planets.filter(p=>p.owner==='enemy'&&!p.build);
-    if(own.length){
-      const r=Math.random();
-      const frontier=own.filter(p=>p.stationTier<2 && neighbors(p).some(q=>q.owner!=='enemy'));
-      const noRef=own.filter(p=>!p.refinery), noYard=own.filter(p=>!p.shipyard), noBay=own.filter(p=>!p.bomberbay);
-      if(frontier.length && galaxy.credits.enemy>UPGRADE[1].cost && r<0.20){
-        tryUpgrade(pick(frontier),'enemy');                       // fortify
-      } else if(noRef.length && galaxy.credits.enemy>STRUCT.refinery.cost && r<0.40){
-        tryStruct(pick(noRef),'enemy','refinery');                // grow economy
-      } else if(noYard.length && galaxy.credits.enemy>STRUCT.shipyard.cost && r<0.50){
-        tryStruct(pick(noYard),'enemy','shipyard');               // open capital production
-      } else if(noBay.length && galaxy.credits.enemy>STRUCT.bomberbay.cost && r<0.60){
-        tryStruct(pick(noBay),'enemy','bomberbay');               // open bomber production
-      } else {
-        const yards=own.filter(p=>p.shipyard), bays=own.filter(p=>p.bomberbay), q=Math.random();
-        if(galaxy.credits.enemy>700 && yards.length && q<0.3) tryBuild(pick(yards),'enemy','capital');
-        else if(bays.length && q<0.55) tryBuild(pick(bays),'enemy','bomber');     // torpedo punch
-        else tryBuild(pick(own),'enemy', Math.random()<0.5?'frigate':'fighter');  // line + screen
-      }
+  if(galaxy.aiBuild<=0){ galaxy.aiBuild=rand(2,3.2);
+    for(const p of galaxy.planets){
+      if(p.owner!=='enemy'||p.build) continue;
+      if(galaxy.credits.enemy<BUILD.fighter.cost) break;
+      const frontier=neighbors(p).some(q=>q.owner!=='enemy'), r=Math.random();
+      if(!p.refinery && r<0.34 && galaxy.credits.enemy>STRUCT.refinery.cost) tryStruct(p,'enemy','refinery');
+      else if(!p.shipyard && r<0.46 && galaxy.credits.enemy>STRUCT.shipyard.cost) tryStruct(p,'enemy','shipyard');
+      else if(!p.bomberbay && r<0.55 && galaxy.credits.enemy>STRUCT.bomberbay.cost) tryStruct(p,'enemy','bomberbay');
+      else if(frontier && p.stationTier<2 && r<0.62 && galaxy.credits.enemy>UPGRADE[p.stationTier+1].cost) tryUpgrade(p,'enemy');
+      else { const q=Math.random();
+        if(p.shipyard && galaxy.credits.enemy>720 && q<0.28) tryBuild(p,'enemy','capital');
+        else if(p.bomberbay && q<0.5) tryBuild(p,'enemy','bomber');
+        else tryBuild(p,'enemy', q<0.65?'fighter':'frigate'); }
     }
   }
-  // attack / expand
+  // ── offensives: every world with a surplus fleet pushes toward a target (multi-hop) ──
   galaxy.aiAttack-=dt;
-  if(galaxy.aiAttack<=0){ galaxy.aiAttack=rand(7,12);
-    const defPower=q=>powerOfUnits(q.garrison.units)+q.stationTier*7;   // station adds to defense
-    const launchers=galaxy.planets.filter(p=>p.owner==='enemy'&&p.garrison.units.length>=3);
-    for(const p of launchers){
-      const tgts=neighbors(p).filter(q=>q.owner!=='enemy').sort((a,b)=>defPower(a)-defPower(b));
-      if(!tgts.length) continue;
-      const t=tgts[0];
-      if(defPower(t)===0 || powerOfUnits(p.garrison.units)>=defPower(t)*0.8){ sendFleet(p,t,'enemy'); break; }
+  if(galaxy.aiAttack<=0){ galaxy.aiAttack=rand(2.5,4);
+    const defPower=q=>powerOfUnits(q.garrison.units)+q.stationTier*7;
+    for(const p of galaxy.planets){
+      if(p.owner!=='enemy' || p.income>=6) continue;          // keep homeworld fleets home as a reserve
+      if(powerOfUnits(p.garrison.units)<5) continue;          // only commit a real fleet
+      const target=aiPickTarget(p,defPower); if(!target) continue;
+      if(defPower(target)!==0 && powerOfUnits(p.garrison.units)<defPower(target)*0.8) continue;
+      const route=pathTo(p.id,target.id);
+      if(route && route.length>=2) sendFleet(p, planetAt(route[1]), 'enemy', route.slice(2));
     }
   }
 }
 function resolveArrival(tr){
   const i=galaxy.transits.indexOf(tr); if(i>=0) galaxy.transits.splice(i,1);
-  const P=planetAt(tr.to);
-  if(P.owner===tr.fac){ P.garrison.units.push(...tr.units); P.garrison.fac=tr.fac; return; }
-  if(P.garrison.units.length>0 || P.stationTier>0){ launchBattle(tr,P); return; }  // garrison or station → fight
-  P.owner=tr.fac; P.garrison={fac:tr.fac,units:tr.units};                          // truly undefended → capture
+  const P=planetAt(tr.to), fac=tr.fac, path=tr.path||[];
+  if(P.owner===fac){                                    // friendly: pass through, or land if this is the destination
+    if(path.length) hopNext(P,fac,tr.units,path);
+    else { P.garrison.units.push(...tr.units); P.garrison.fac=fac; }
+    return;
+  }
+  if(P.garrison.units.length>0 || P.stationTier>0){ launchBattle(tr,P); return; }  // defended → fight
+  P.owner=fac;                                          // undefended → capture
+  if(path.length){ P.garrison={fac,units:[]}; hopNext(P,fac,tr.units,path); }      // flip it and keep moving
+  else { P.garrison={fac,units:tr.units}; }
 }
 function launchBattle(tr,P){
-  const attacker={fac:tr.fac,units:tr.units};
+  const fac=tr.fac, path=tr.path||[];
+  const attacker={fac,units:tr.units};
   const defender={fac:P.garrison.fac,units:P.garrison.units};
   startBattle(attacker,defender,P,(winnerFac,survivors)=>{
-    if(winnerFac===attacker.fac){ P.owner=attacker.fac; P.garrison={fac:attacker.fac,units:survivors}; P.stationTier=0; P.build=null; } // station smashed
-    else { P.garrison={fac:defender.fac,units:survivors}; }       // defender holds; owner & station unchanged (repairs)
+    if(winnerFac===fac){                                // attacker took the world (station smashed)
+      P.owner=fac; P.stationTier=0; P.build=null;
+      if(path.length){ P.garrison={fac,units:[]}; hopNext(P,fac,survivors,path); }  // press the advance
+      else { P.garrison={fac,units:survivors}; }
+    } else { P.garrison={fac:defender.fac,units:survivors}; }   // defender holds; owner & station unchanged (repairs)
     setScene(Galaxy);
     galaxyCheckEnd();
   });
