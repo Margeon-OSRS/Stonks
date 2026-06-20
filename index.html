@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
 <style>
-  /* ----- Design tokens: the Royal Chancellery ----- */
   :root {
     --chamber:      #0f1226;
     --chamber-deep: #080a18;
@@ -20,18 +19,14 @@
     --ink-muted:    #9a8a64;
     --panel:        rgba(232,220,192,0.035);
     --panel-line:   rgba(200,162,74,0.22);
-
     --display: "Cinzel", Georgia, serif;
     --body:    "EB Garamond", Georgia, serif;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { min-height: 100%; }
-
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(ellipse at 50% 0%, #1a1f3d 0%, var(--chamber) 45%, var(--chamber-deep) 100%);
+    background: radial-gradient(ellipse at 50% 0%, #1a1f3d 0%, var(--chamber) 45%, var(--chamber-deep) 100%);
     color: var(--vellum);
     font-family: var(--body);
     text-rendering: optimizeLegibility;
@@ -39,168 +34,94 @@
     padding: 0 1.25rem 5rem;
   }
   body::after {
-    content: "";
-    position: fixed; inset: 0; pointer-events: none;
+    content: ""; position: fixed; inset: 0; pointer-events: none;
     box-shadow: inset 0 0 220px 70px rgba(8,10,24,0.85);
   }
-
   .realm { max-width: 880px; margin: 0 auto; position: relative; z-index: 1; }
 
-  /* ----- Header: crest + name + reign ----- */
   header {
-    display: flex;
-    align-items: center;
-    gap: 1.1rem;
+    display: flex; align-items: center; gap: 1.1rem;
     padding: 2.2rem 0 1.6rem;
     border-bottom: 1px solid var(--panel-line);
   }
-
-  .crest {
-    width: 64px; height: 64px; flex: none;
-    filter: drop-shadow(0 0 14px rgba(230,200,120,0.18));
-  }
+  .crest { width: 64px; height: 64px; flex: none; filter: drop-shadow(0 0 14px rgba(230,200,120,0.18)); }
   .crest svg { width: 100%; height: 100%; display: block; }
-
   .titles { flex: 1; min-width: 0; }
-  .eyebrow {
-    font-style: italic;
-    font-size: 0.82rem;
-    letter-spacing: 0.16em;
-    color: var(--ink-muted);
-    margin-bottom: 0.2rem;
-  }
+  .eyebrow { font-style: italic; font-size: 0.82rem; letter-spacing: 0.16em; color: var(--ink-muted); margin-bottom: 0.2rem; }
   .realm-name {
-    font-family: var(--display);
-    font-weight: 700;
+    font-family: var(--display); font-weight: 700;
     font-size: clamp(1.6rem, 5vw, 2.4rem);
-    color: var(--gold-bright);
-    letter-spacing: 0.05em;
-    line-height: 1;
+    color: var(--gold-bright); letter-spacing: 0.05em; line-height: 1;
   }
-  .reign {
-    text-align: right; flex: none;
-    font-family: var(--display);
-    font-size: 0.95rem;
-    letter-spacing: 0.08em;
-    color: var(--gold);
-  }
-  .reign small {
-    display: block;
-    font-family: var(--body);
-    font-style: italic;
-    letter-spacing: 0.04em;
-    color: var(--ink-muted);
-    margin-top: 0.25rem;
-    font-size: 0.82rem;
-  }
+  .reign { text-align: right; flex: none; font-family: var(--display); font-size: 0.95rem; letter-spacing: 0.08em; color: var(--gold); }
+  .reign small { display: block; font-family: var(--body); font-style: italic; letter-spacing: 0.04em; color: var(--ink-muted); margin-top: 0.25rem; font-size: 0.82rem; }
 
-  /* ----- The ledger of the realm: stat cards ----- */
   .ledger-label {
-    font-family: var(--display);
-    font-size: 0.78rem;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: var(--gold-dim);
-    margin: 2rem 0 1rem;
-    text-align: center;
+    font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.28em;
+    text-transform: uppercase; color: var(--gold-dim);
+    margin: 2rem 0 1rem; text-align: center;
   }
-
-  .ledger {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.9rem;
-  }
-
+  .ledger { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.9rem; }
   .stat {
-    background: var(--panel);
-    border: 1px solid var(--panel-line);
-    border-radius: 3px;
-    padding: 1.15rem 1rem 1.25rem;
-    text-align: center;
-    position: relative;
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 3px;
+    padding: 1.15rem 1rem 1.25rem; text-align: center; position: relative;
   }
-  /* corner gilding */
-  .stat::before, .stat::after {
-    content: ""; position: absolute; width: 10px; height: 10px;
-    border-color: var(--gold); border-style: solid;
-  }
+  .stat::before, .stat::after { content: ""; position: absolute; width: 10px; height: 10px; border-color: var(--gold); border-style: solid; }
   .stat::before { top: 5px; left: 5px; border-width: 1px 0 0 1px; }
   .stat::after  { bottom: 5px; right: 5px; border-width: 0 1px 1px 0; }
-
   .stat .glyph { width: 30px; height: 30px; margin: 0 auto 0.5rem; }
   .stat .glyph svg { width: 100%; height: 100%; display: block; }
+  .stat .name { font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 0.35rem; }
+  .stat .value { font-family: var(--display); font-weight: 600; font-size: 1.7rem; color: var(--gold-bright); line-height: 1; transition: color 0.3s; }
+  .stat .unit { font-family: var(--body); font-style: italic; font-size: 0.8rem; color: var(--gold-dim); margin-top: 0.3rem; }
 
-  .stat .name {
-    font-size: 0.78rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-    margin-bottom: 0.35rem;
-  }
-  .stat .value {
-    font-family: var(--display);
-    font-weight: 600;
-    font-size: 1.7rem;
-    color: var(--gold-bright);
-    line-height: 1;
-  }
-  .stat .unit {
-    font-family: var(--body);
-    font-style: italic;
-    font-size: 0.8rem;
-    color: var(--gold-dim);
-    margin-top: 0.3rem;
-  }
-
-  /* ----- Realm stability bar (reflects loyalty) ----- */
   .stability { margin-top: 1.8rem; }
-  .stability .cap {
-    display: flex; justify-content: space-between;
-    font-size: 0.8rem; letter-spacing: 0.1em;
-    color: var(--ink-muted); margin-bottom: 0.5rem;
-    text-transform: uppercase;
-  }
-  .stability .track {
-    height: 9px; border-radius: 5px;
-    background: rgba(8,10,24,0.6);
-    border: 1px solid var(--panel-line);
-    overflow: hidden;
-  }
-  .stability .fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright));
-    border-radius: 5px 0 0 5px;
-    transition: width 0.6s ease;
-  }
+  .stability .cap { display: flex; justify-content: space-between; font-size: 0.8rem; letter-spacing: 0.1em; color: var(--ink-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
+  .stability .track { height: 9px; border-radius: 5px; background: rgba(8,10,24,0.6); border: 1px solid var(--panel-line); overflow: hidden; }
+  .stability .fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold-bright)); border-radius: 5px 0 0 5px; transition: width 0.6s ease; }
 
-  footer {
-    text-align: center;
-    margin-top: 3rem;
-    font-size: 0.78rem;
-    letter-spacing: 0.16em;
-    color: var(--gold-dim);
-    text-transform: uppercase;
+  /* ----- Council: the turn engine control ----- */
+  .council { text-align: center; margin-top: 2.6rem; }
+  .proclaim {
+    font-family: var(--display); font-weight: 600;
+    font-size: 1.05rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--gold-bright);
+    background: rgba(200,162,74,0.06);
+    border: 1px solid var(--gold); border-radius: 3px;
+    padding: 0.95rem 2.4rem;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 0.7rem;
+    transition: background 0.25s, box-shadow 0.25s, transform 0.05s;
   }
+  .proclaim:hover { background: rgba(200,162,74,0.16); box-shadow: 0 0 22px rgba(230,200,120,0.25); }
+  .proclaim:active { transform: translateY(1px); }
+  .proclaim:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
+  .proclaim .seal-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--wax); box-shadow: 0 0 0 2px rgba(122,43,43,0.35); }
+  .hint { font-style: italic; font-size: 0.85rem; color: var(--ink-muted); margin-top: 0.7rem; }
+  .chronicle {
+    min-height: 1.4rem; margin-top: 1.4rem;
+    font-size: 0.95rem; color: var(--vellum); opacity: 0.85;
+  }
+  .chronicle .ch-when { font-family: var(--display); font-size: 0.85rem; letter-spacing: 0.06em; color: var(--gold); margin-right: 0.4rem; }
+
+  footer { text-align: center; margin-top: 3rem; font-size: 0.78rem; letter-spacing: 0.16em; color: var(--gold-dim); text-transform: uppercase; }
   footer span { color: var(--ink-muted); }
 </style>
 </head>
 <body>
   <!-- ============================================================
-       FANTASY NATION SIMULATOR — Task 2: core data model + render
-       `nation` is the single source of truth.
-       `render()` paints it. Later tasks mutate nation then re-render.
+       FANTASY NATION SIMULATOR — Task 3: the turn engine
+       nation.turn is the single clock. year & season derive from it.
+       Hold Council -> advanceTurn() -> updateNation() -> render().
        ============================================================ -->
   <div class="realm">
 
     <header>
       <div class="crest" aria-hidden="true">
         <svg viewBox="0 0 200 200">
-          <defs>
-            <radialGradient id="field" cx="50%" cy="42%" r="60%">
-              <stop offset="0%" stop-color="#1b2347"/>
-              <stop offset="100%" stop-color="#0c1024"/>
-            </radialGradient>
-          </defs>
+          <defs><radialGradient id="field" cx="50%" cy="42%" r="60%">
+            <stop offset="0%" stop-color="#1b2347"/><stop offset="100%" stop-color="#0c1024"/>
+          </radialGradient></defs>
           <circle cx="100" cy="100" r="92" fill="url(#field)" stroke="#c8a24a" stroke-width="2.5"/>
           <circle cx="100" cy="100" r="83" fill="none" stroke="#8a7438" stroke-width="1"/>
           <path d="M100 46 l3.2 9.8 10.3 0 -8.3 6.1 3.2 9.8 -8.4 -6 -8.4 6 3.2 -9.8 -8.3 -6.1 10.3 0 z" fill="#e6c878"/>
@@ -209,53 +130,57 @@
             <path d="M78 94 v44 h44 v-44"/>
             <path d="M92 138 v-20 a8 8 0 0 1 16 0 v20" fill="#0c1024"/>
           </g>
-          <circle cx="89" cy="110" r="2.4" fill="#e6c878"/>
-          <circle cx="111" cy="110" r="2.4" fill="#e6c878"/>
+          <circle cx="89" cy="110" r="2.4" fill="#e6c878"/><circle cx="111" cy="110" r="2.4" fill="#e6c878"/>
         </svg>
       </div>
       <div class="titles">
         <div class="eyebrow">— Chronicle of the Realm —</div>
         <div class="realm-name" id="realm-name">Aldermark</div>
       </div>
-      <div class="reign" id="reign">
-        Year I
+      <div class="reign">
+        <span id="reign-year">Year I</span>
         <small id="season">Spring</small>
       </div>
     </header>
 
     <div class="ledger-label">The State of the Realm</div>
-    <div class="ledger" id="ledger"><!-- rendered from data --></div>
+    <div class="ledger" id="ledger"></div>
 
     <div class="stability">
-      <div class="cap">
-        <span>Loyalty of the People</span>
-        <span id="loyalty-read">—</span>
-      </div>
+      <div class="cap"><span>Loyalty of the People</span><span id="loyalty-read">—</span></div>
       <div class="track"><div class="fill" id="loyalty-fill" style="width:0"></div></div>
     </div>
 
+    <div class="council">
+      <button id="advance" class="proclaim"><span class="seal-dot"></span>Hold Council</button>
+      <div class="hint">Advance to the next season</div>
+      <div class="chronicle" id="chronicle">The realm awaits your first council.</div>
+    </div>
+
     <footer>
-      Proof of Concept &nbsp;·&nbsp; Task 2 of 10 &nbsp;·&nbsp; <span>the realm takes shape</span>
+      Proof of Concept &nbsp;·&nbsp; Task 3 of 10 &nbsp;·&nbsp; <span>the clock begins to turn</span>
     </footer>
   </div>
 
   <script>
     /* =========================================================
        THE NATION — single source of truth.
-       Every later system reads and writes these values.
        ========================================================= */
     const nation = {
       name:       "Aldermark",
-      turn:       1,
-      season:     "Spring",
-      treasury:   500,    // gold in the vaults
-      population: 1000,   // souls under your rule
-      food:       800,    // bushels in the granary
-      military:   50,     // soldiers at arms
-      happiness:  70,     // loyalty / contentment, 0–100
+      turn:       1,      // the only clock; year + season derive from this
+      treasury:   500,
+      population: 1000,
+      food:       800,
+      military:   50,
+      happiness:  70,     // 0–100
     };
 
-    /* Gold-line glyphs, drawn to match the crest. */
+    /* ----- Time: 4 turns per year ----- */
+    const SEASONS = ["Spring", "Summer", "Autumn", "Winter"];
+    const yearOf   = (t) => Math.floor((t - 1) / 4) + 1;
+    const seasonOf = (t) => SEASONS[(t - 1) % 4];
+
     const ICONS = {
       coin: '<svg viewBox="0 0 24 24" fill="none" stroke="#c8a24a" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><path d="M12 9.5v5M10 12h4" stroke-width="1.2"/></svg>',
       people: '<svg viewBox="0 0 24 24" fill="none" stroke="#c8a24a" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M16 6.5a3 3 0 0 1 0 5.6M16.5 19c0-2.6-1-4.2-2.4-5.2" stroke-width="1.3"/></svg>',
@@ -264,7 +189,6 @@
       banner: '<svg viewBox="0 0 24 24" fill="none" stroke="#c8a24a" stroke-width="1.6" stroke-linejoin="round"><path d="M12 21s-6-3.8-6-8.5V5l6-2 6 2v7.5C18 17.2 12 21 12 21z"/><path d="M12 8.5v4M10 10.5h4" stroke-width="1.2"/></svg>',
     };
 
-    /* Descriptor list — adding a stat later is one entry here. */
     const STATS = [
       { key: "treasury",   name: "Treasury", unit: "gold",     icon: "coin"   },
       { key: "population", name: "Subjects", unit: "souls",    icon: "people" },
@@ -273,33 +197,67 @@
       { key: "happiness",  name: "Loyalty",  unit: "%",        icon: "banner" },
     ];
 
-    const fmt = (n) => n.toLocaleString("en-US");
-    const ROMAN = ["", "I","II","III","IV","V","VI","VII","VIII","IX","X"];
-    const roman = (n) => ROMAN[n] || n;
+    const fmt = (n) => Math.round(n).toLocaleString("en-US");
+    const ROMAN = ["", "I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
+    const roman = (n) => ROMAN[n] || String(n);
 
-    /* render() — the only thing that touches the DOM for state. */
     function render() {
       document.getElementById("realm-name").textContent = nation.name;
-      document.getElementById("reign").childNodes[0].textContent = "Year " + roman(nation.turn) + " ";
-      document.getElementById("season").textContent = nation.season;
+      document.getElementById("reign-year").textContent = "Year " + roman(yearOf(nation.turn));
+      document.getElementById("season").textContent = seasonOf(nation.turn);
 
-      const ledger = document.getElementById("ledger");
-      ledger.innerHTML = STATS.map(s => `
+      document.getElementById("ledger").innerHTML = STATS.map(s => `
         <div class="stat">
           <div class="glyph">${ICONS[s.icon]}</div>
           <div class="name">${s.name}</div>
           <div class="value">${fmt(nation[s.key])}</div>
           <div class="unit">${s.unit}</div>
-        </div>
-      `).join("");
+        </div>`).join("");
 
       const h = Math.max(0, Math.min(100, nation.happiness));
       document.getElementById("loyalty-fill").style.width = h + "%";
-      document.getElementById("loyalty-read").textContent = h + " / 100";
+      document.getElementById("loyalty-read").textContent = Math.round(h) + " / 100";
     }
 
+    /* =========================================================
+       updateNation() — PLACEHOLDER ECONOMY.
+       Task 4 replaces this with real, interdependent rules.
+       For now: people are born, people eat. That's it.
+       ========================================================= */
+    function updateNation() {
+      const births = Math.round(nation.population * 0.02);
+      nation.population += births;
+      const eaten = Math.round(nation.population / 20);
+      nation.food = Math.max(0, nation.food - eaten);
+    }
+
+    /* The turn loop: snapshot -> advance clock -> update -> render -> report */
+    function advanceTurn() {
+      const before = { ...nation };
+      nation.turn += 1;
+      updateNation();
+      render();
+      reportChanges(before, nation);
+    }
+
+    function reportChanges(before, after) {
+      const tracked = [
+        ["population", "subjects"], ["food", "granary"], ["treasury", "gold"],
+        ["military", "soldiers"], ["happiness", "loyalty"],
+      ];
+      const parts = [];
+      for (const [k, label] of tracked) {
+        const d = Math.round(after[k]) - Math.round(before[k]);
+        if (d !== 0) parts.push(`${d > 0 ? "+" : "−"}${Math.abs(d).toLocaleString()} ${label}`);
+      }
+      const when = `${seasonOf(after.turn)} of Year ${roman(yearOf(after.turn))}.`;
+      document.getElementById("chronicle").innerHTML =
+        `<span class="ch-when">${when}</span>` + (parts.length ? parts.join(" · ") : "The realm holds steady.");
+    }
+
+    document.getElementById("advance").addEventListener("click", advanceTurn);
     render();
-    console.log("%c👑 Aldermark — data model online", "color:#e6c878;font-weight:bold");
+    console.log("%c👑 Aldermark — the clock turns", "color:#e6c878;font-weight:bold");
   </script>
 </body>
 </html>
