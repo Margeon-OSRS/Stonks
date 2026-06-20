@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fantasy Nation Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ----- Design tokens: the Royal Chancellery ----- */
+  :root {
+    --chamber:      #0f1226;  /* midnight indigo — the council chamber at night */
+    --chamber-deep: #080a18;  /* shadowed corners */
+    --vellum:       #e8dcc0;  /* aged parchment */
+    --gold:         #c8a24a;  /* authority */
+    --gold-bright:  #e6c878;  /* candlelight on gilt */
+    --gold-dim:     #8a7438;  /* tarnish */
+    --wax:          #7a2b2b;  /* oxblood — the seal */
+    --ink-muted:    #9a8a64;  /* faded ink on dark */
+
+    --display: "Cinzel", Georgia, serif;
+    --body:    "EB Garamond", Georgia, serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 50% 38%, #1a1f3d 0%, var(--chamber) 45%, var(--chamber-deep) 100%);
+    color: var(--vellum);
+    font-family: var(--body);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* faint surrounding darkness, like candlelight failing at the edges */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 220px 60px rgba(8,10,24,0.9);
+  }
+
+  .hall {
+    position: relative;
+    text-align: center;
+    padding: 2rem;
+    z-index: 1;
+  }
+
+  /* ----- Signature: the seal of the realm ----- */
+  .seal {
+    position: relative;
+    width: clamp(150px, 34vw, 210px);
+    margin: 0 auto 2.4rem;
+  }
+
+  /* candlelight glow behind the seal */
+  .seal::before {
+    content: "";
+    position: absolute;
+    inset: -38%;
+    background: radial-gradient(circle, rgba(230,200,120,0.22) 0%, rgba(230,200,120,0.06) 40%, transparent 70%);
+    z-index: -1;
+    animation: candle 5.5s ease-in-out infinite;
+  }
+
+  @keyframes candle {
+    0%, 100% { opacity: 0.85; transform: scale(1); }
+    45%      { opacity: 1;    transform: scale(1.05); }
+    70%      { opacity: 0.78; transform: scale(0.99); }
+  }
+
+  .seal svg { display: block; width: 100%; height: auto; }
+
+  /* ----- Title ----- */
+  .eyebrow {
+    font-family: var(--body);
+    font-style: italic;
+    font-size: clamp(0.85rem, 2.4vw, 1rem);
+    letter-spacing: 0.18em;
+    color: var(--ink-muted);
+    margin-bottom: 1.1rem;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    color: var(--gold-bright);
+    line-height: 1.05;
+    letter-spacing: 0.06em;
+    font-size: clamp(2rem, 7vw, 3.6rem);
+    text-shadow: 0 2px 24px rgba(200,162,74,0.25);
+  }
+
+  h1 .lesser {
+    display: block;
+    font-size: 0.46em;
+    letter-spacing: 0.34em;
+    color: var(--gold);
+    margin-top: 0.5rem;
+    font-weight: 600;
+  }
+
+  .tagline {
+    font-size: clamp(1.05rem, 3vw, 1.35rem);
+    color: var(--vellum);
+    opacity: 0.78;
+    margin-top: 1.6rem;
+    font-style: italic;
+  }
+
+  /* ----- Status: confirms the build is live ----- */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 2.4rem;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid rgba(200,162,74,0.35);
+    border-radius: 2px;
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(200,162,74,0.04);
+  }
+
+  .status .ember {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #6fae6f;
+    box-shadow: 0 0 8px 1px rgba(111,174,111,0.8);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+
+  /* ----- Footer: where we are in the build ----- */
+  footer {
+    position: fixed;
+    bottom: 1.4rem;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+  footer span { color: var(--ink-muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .seal::before, .status .ember { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <!-- ============================================================
+       FANTASY NATION SIMULATOR — Task 1: scaffold + visual identity
+       Future tasks mount the game inside .hall (or replace it).
+       The :root tokens above are the palette the whole game inherits.
+       ============================================================ -->
+  <main class="hall">
+
+    <div class="seal" aria-hidden="true">
+      <svg viewBox="0 0 200 200" role="img">
+        <defs>
+          <radialGradient id="field" cx="50%" cy="42%" r="60%">
+            <stop offset="0%"  stop-color="#1b2347" />
+            <stop offset="100%" stop-color="#0c1024" />
+          </radialGradient>
+        </defs>
+
+        <!-- outer ring of the seal -->
+        <circle cx="100" cy="100" r="92" fill="url(#field)" stroke="#c8a24a" stroke-width="2.5"/>
+        <circle cx="100" cy="100" r="83" fill="none" stroke="#8a7438" stroke-width="1"/>
+
+        <!-- tick marks, like an old wax seal / astrolabe -->
+        <g stroke="#8a7438" stroke-width="1.4">
+          <!-- generated ring of ticks -->
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(0 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(30 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(60 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(90 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(120 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(150 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(180 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(210 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(240 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(270 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(300 100 100)"/>
+          <line x1="100" y1="10"  x2="100" y2="18" transform="rotate(330 100 100)"/>
+        </g>
+
+        <!-- star above the tower -->
+        <path d="M100 44 l3.2 9.8 10.3 0 -8.3 6.1 3.2 9.8 -8.4 -6 -8.4 6 3.2 -9.8 -8.3 -6.1 10.3 0 z"
+              fill="#e6c878"/>
+
+        <!-- the keep / tower — device of the realm -->
+        <g fill="none" stroke="#c8a24a" stroke-width="2.4" stroke-linejoin="round">
+          <!-- crenellations -->
+          <path d="M74 92 v-8 h6 v5 h6 v-5 h8 v5 h6 v-5 h6 v5 h6 v-5 h8 v5 h6 v-5 h6 v8 z"/>
+          <!-- tower body -->
+          <path d="M78 92 v44 h44 v-44"/>
+          <!-- door -->
+          <path d="M92 136 v-20 a8 8 0 0 1 16 0 v20" fill="#0c1024"/>
+        </g>
+        <!-- twin windows -->
+        <circle cx="89" cy="108" r="2.4" fill="#e6c878"/>
+        <circle cx="111" cy="108" r="2.4" fill="#e6c878"/>
+
+        <!-- motto banner suggestion -->
+        <path d="M58 158 h84" stroke="#8a7438" stroke-width="1.2"/>
+      </svg>
+    </div>
+
+    <p class="eyebrow">— Chronicle of the Realm —</p>
+
+    <h1>
+      Fantasy Nation
+      <span class="lesser">Simulator</span>
+    </h1>
+
+    <p class="tagline">Your realm awaits its sovereign.</p>
+
+    <div class="status">
+      <span class="ember"></span>
+      Live · v0.1 scaffold
+    </div>
+
+  </main>
+
+  <footer>
+    Proof of Concept &nbsp;·&nbsp; Task 1 of 10 &nbsp;·&nbsp; <span>the foundation is laid</span>
+  </footer>
+
+  <script>
+    // Scaffold smoke-test: confirms the JS pipeline runs once served.
+    // Future tasks build the game on top of this.
+    console.log(
+      "%c👑 Fantasy Nation Simulator — scaffold live",
+      "color:#e6c878;font-size:14px;font-weight:bold"
+    );
+    document.documentElement.dataset.bootAt = new Date().toISOString();
+  </script>
+</body>
+</html>
