@@ -3,46 +3,79 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Void Command — Skirmish Prototype</title>
-<meta name="description" content="A single-file browser RTS prototype — select ships, issue move and attack orders, and dismantle enemy capital ships hardpoint by hardpoint.">
+<title>Void Command — Galactic Skirmish</title>
+<meta name="description" content="A browser RTS: command a fleet across a galaxy of contested worlds, then drop into tactical battles and dismantle enemy capital ships hardpoint by hardpoint.">
 <meta name="theme-color" content="#05070e">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Void Command — Skirmish Prototype">
-<meta property="og:description" content="Command a fleet, focus-fire enemy capital-ship subsystems, win the void. Runs entirely in the browser.">
+<meta property="og:title" content="Void Command — Galactic Skirmish">
+<meta property="og:description" content="Conquer the galaxy planet by planet, then fight the battles in real time. Runs entirely in the browser.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23070b16'/><path d='M16 6 L24 26 L16 21 L8 26 Z' fill='%233fd0ff'/></svg>">
 <style>
   :root{
-    --bg:#05070e; --void:#070b16; --grid:rgba(120,150,200,.05);
-    --ink:#cfe3ff; --dim:#7d8fb0; --faint:#46556f;
-    --player:#3fd0ff; --enemy:#ff7a4d;
-    --panel:rgba(10,16,28,.82); --line:rgba(96,128,176,.22);
+    --bg:#05070e; --ink:#cfe3ff; --dim:#7d8fb0; --faint:#46556f;
+    --player:#3fd0ff; --enemy:#ff7a4d; --neutral:#8aa0bf;
+    --panel:rgba(10,16,28,.84); --line:rgba(96,128,176,.22);
     --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
     --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:var(--bg);overflow:hidden;font-family:var(--sans);color:var(--ink)}
-  #stage{position:fixed;inset:0;display:block;cursor:crosshair}
+  #stage{position:fixed;inset:0;display:block}
   .hud{position:fixed;pointer-events:none;user-select:none;z-index:5}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(4px)}
+  .title{font-size:13px;letter-spacing:.3em;text-transform:uppercase;font-weight:500}
+  .sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--faint);margin-top:3px}
+  .hide{display:none !important}
 
-  /* top-left: title + force readout */
-  #topleft{top:14px;left:14px;padding:12px 14px;min-width:230px}
-  #topleft .title{font-size:13px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink);font-weight:500}
-  #topleft .sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--faint);margin-top:3px}
-  .force{display:flex;align-items:center;gap:8px;margin-top:11px;font-family:var(--mono);font-size:12px}
+  .force{display:flex;align-items:center;gap:8px;margin-top:9px;font-family:var(--mono);font-size:12px}
   .force .dot{width:8px;height:8px;border-radius:2px}
-  .force .nm{color:var(--dim);min-width:118px}
+  .force .nm{color:var(--dim);min-width:120px}
   .force .ct{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums}
 
-  /* bottom-left: controls */
-  #help{bottom:14px;left:14px;padding:11px 14px;max-width:330px;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--dim)}
-  #help b{color:var(--ink);font-weight:500}
-  #help .k{color:var(--player)}
+  /* shared corners */
+  #topleft,#gtop{top:14px;left:14px;padding:12px 14px;min-width:236px}
+  #help,#ghelp{bottom:14px;left:14px;padding:11px 14px;max-width:340px;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--dim)}
+  #help b,#ghelp b{color:var(--ink);font-weight:500}
+  #help .k,#ghelp .k{color:var(--player)}
 
-  /* bottom-right: inspector */
+  /* galaxy clock + credits */
+  #gtop .row{display:flex;gap:18px;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  #gtop .row b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+
+  /* galaxy planet panel (bottom-right) */
+  #gplanet{bottom:14px;right:14px;padding:13px 14px;width:250px;font-family:var(--mono);pointer-events:auto;opacity:0;transition:opacity .15s}
+  #gplanet.on{opacity:1}
+  #gplanet h3{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;display:flex;align-items:center;gap:8px}
+  #gplanet h3 .tag{margin-left:auto;font-size:10px;letter-spacing:.1em;color:var(--faint)}
+  #gplanet .stat{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:8px}
+  #gplanet .stat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+  #gbuild{margin-top:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  #gbuild button{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
+    background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
+  #gbuild button:hover:not(:disabled){border-color:var(--player);color:var(--player)}
+  #gbuild button:disabled{opacity:.32;cursor:default}
+  #gbuild button .c{display:block;color:var(--faint);font-size:9px}
+  .seclabel{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:11px 0 5px}
+  #gstruct{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #gstruct button{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
+    background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
+  #gstruct button:hover:not(:disabled){border-color:var(--player);color:var(--player)}
+  #gstruct button:disabled{opacity:.4;cursor:default}
+  #gstruct button.has{border-color:rgba(63,208,255,.5);color:var(--player);opacity:1}
+  #gstruct button .c{display:block;color:var(--faint);font-size:9px}
+  #gfortify{width:100%;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
+    background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
+  #gfortify:hover:not(:disabled){border-color:var(--player);color:var(--player)}
+  #gfortify:disabled{opacity:.32;cursor:default}
+  #gfortify .c{color:var(--faint);font-size:9px;margin-left:6px}
+  #gbprog{margin-top:10px;font-size:10px;color:var(--dim);letter-spacing:.05em}
+  #gbprog .meter{height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px}
+  #gbprog .meter i{display:block;height:100%;background:var(--player);width:0}
+
+  /* battle inspector (bottom-right) */
   #inspect{bottom:14px;right:14px;padding:12px 14px;width:268px;font-family:var(--mono);opacity:0;transition:opacity .15s}
   #inspect.on{opacity:1}
-  #inspect h3{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);font-weight:500;display:flex;align-items:center;gap:8px}
+  #inspect h3{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;display:flex;align-items:center;gap:8px}
   #inspect h3 .tag{margin-left:auto;font-size:10px;letter-spacing:.1em;color:var(--faint)}
   .bar{margin-top:9px}
   .bar .lab{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;color:var(--dim);margin-bottom:3px}
@@ -50,39 +83,70 @@
   .meter{height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
   .meter i{display:block;height:100%;border-radius:3px;transition:width .12s linear}
   .hps{margin-top:11px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .hp{display:flex;align-items:center;gap:7px;font-size:10.5px;letter-spacing:.04em;color:var(--dim)}
+  .hp{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--dim)}
   .hp .pip{width:7px;height:7px;border-radius:50%;background:var(--player);box-shadow:0 0 6px var(--player);flex:none}
   .hp.dead{color:var(--faint);text-decoration:line-through}
   .hp.dead .pip{background:var(--faint);box-shadow:none}
 
-  /* end screen */
-  #end{inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,11,.72);z-index:20;pointer-events:auto}
+  /* end / result overlay */
+  #end{inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(3,5,11,.74);z-index:20;pointer-events:auto}
   #end.on{display:flex}
-  #end .verdict{font-size:46px;letter-spacing:.18em;text-transform:uppercase;font-weight:500}
-  #end .note{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--dim);margin-top:10px}
-  #end button{margin-top:26px;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+  #end .verdict{font-size:42px;letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+  #end .note{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--dim);margin-top:10px;max-width:440px;text-align:center;line-height:1.7}
+  #end button{margin-top:24px;font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
     color:var(--ink);background:transparent;border:1px solid var(--line);padding:12px 26px;border-radius:8px;cursor:pointer;transition:.15s}
   #end button:hover{border-color:var(--player);color:var(--player);box-shadow:0 0 22px rgba(63,208,255,.25)}
-  .hide{display:none !important}
 </style>
 </head>
 <body>
 <canvas id="stage"></canvas>
 
-<div id="topleft" class="hud panel">
+<!-- ── GALAXY HUD ─────────────────────────────────────────────── -->
+<div id="gtop" class="hud panel">
   <div class="title">Void Command</div>
-  <div class="sub">SKIRMISH PROTOTYPE · MILESTONE 1</div>
-  <div class="force"><span class="dot" style="background:var(--player)"></span><span class="nm" id="pName">Vanguard</span><span class="ct" id="pCount">0</span></div>
-  <div class="force"><span class="dot" style="background:var(--enemy)"></span><span class="nm" id="eName">Crimson Accord</span><span class="ct" id="eCount">0</span></div>
+  <div class="sub">GALACTIC SKIRMISH · MILESTONE 3</div>
+  <div class="row"><span>Credits <b id="gCred">0</b></span><span>Day <b id="gClock">1</b></span></div>
+  <div class="force"><span class="dot" style="background:var(--player)"></span><span class="nm">Vanguard worlds</span><span class="ct" id="gP">0</span></div>
+  <div class="force"><span class="dot" style="background:var(--enemy)"></span><span class="nm">Crimson worlds</span><span class="ct" id="gE">0</span></div>
+</div>
+<div id="ghelp" class="hud panel">
+  <div><b>Click</b> one of your worlds to select it</div>
+  <div><span class="k">Right-click a linked world</span> — send its fleet</div>
+  <div><b>Build</b>, <b>develop</b> (refinery/shipyard), or <b>fortify</b> from the world panel</div>
+</div>
+<div id="gplanet" class="hud panel">
+  <h3><span id="gName">—</span><span class="tag" id="gOwn"></span></h3>
+  <div class="stat"><span>Income</span><b id="gInc">—</b></div>
+  <div class="stat"><span>Garrison</span><b id="gGar">—</b></div>
+  <div class="stat"><span>Station</span><b id="gStn">—</b></div>
+  <div class="seclabel">Build</div>
+  <div id="gbuild">
+    <button data-kind="fighter">Interceptor<span class="c">60</span></button>
+    <button data-kind="frigate">Frigate<span class="c">200</span></button>
+    <button data-kind="capital">Dreadnought<span class="c">650</span></button>
+  </div>
+  <div class="seclabel">Develop</div>
+  <div id="gstruct">
+    <button data-struct="refinery">Refinery<span class="c">200</span></button>
+    <button data-struct="shipyard">Shipyard<span class="c">300</span></button>
+  </div>
+  <button id="gfortify">Fortify station<span class="c" id="gfortc"></span></button>
+  <div id="gbprog" class="hide">Working <b id="gbName"></b><div class="meter"><i id="gbBar"></i></div></div>
 </div>
 
-<div id="help" class="hud panel">
+<!-- ── BATTLE HUD ─────────────────────────────────────────────── -->
+<div id="topleft" class="hud panel hide">
+  <div class="title">Engagement</div>
+  <div class="sub" id="bWhere">CONTESTED SYSTEM</div>
+  <div class="force"><span class="dot" style="background:var(--player)"></span><span class="nm">Vanguard</span><span class="ct" id="pCount">0</span></div>
+  <div class="force"><span class="dot" style="background:var(--enemy)"></span><span class="nm">Crimson Accord</span><span class="ct" id="eCount">0</span></div>
+</div>
+<div id="help" class="hud panel hide">
   <div><b>Left-click</b> / <b>drag</b> — select your ships</div>
   <div><b>Right-click</b> space — move · <b>Right-click</b> enemy — attack</div>
   <div><span class="k">Right-click a hardpoint</span> — focus-fire that subsystem</div>
   <div><b>WASD</b> pan · <b>wheel</b> zoom · <b>Esc</b> deselect</div>
 </div>
-
 <div id="inspect" class="hud panel">
   <h3><span id="iName">—</span><span class="tag" id="iKind"></span></h3>
   <div class="bar"><div class="lab"><span>Hull</span><span id="iHullN">—</span></div><div class="meter"><i id="iHull" style="width:0"></i></div></div>
@@ -93,607 +157,815 @@
 <div id="end" class="hud">
   <div class="verdict" id="verdict">Victory</div>
   <div class="note" id="endnote"></div>
-  <button id="replay">Run it back</button>
+  <button id="endbtn">Continue</button>
 </div>
 
 <script>
 "use strict";
-/* ─────────────────────────────────────────────────────────────────────
-   VOID COMMAND — milestone-1 skirmish prototype
-   Two-faction top-down RTS slice: selection, move/attack orders,
-   projectile combat, capital-ship hardpoints + shields, light AI.
-   Everything is in this one file. Tune the TYPES/balance block to taste.
-   ───────────────────────────────────────────────────────────────────── */
+/* ═════════════════════════════════════════════════════════════════════
+   VOID COMMAND — Galactic Skirmish (milestone 3)
+   Two scenes share one canvas + loop, managed by a tiny scene manager:
+     • GALAXY  — planets on a hyperlane graph, fleets, economy, build, AI
+     • BATTLE  — the real-time tactical slice (select/move/attack + hardpoints)
+   The seam: two fleets meeting spawns a battle built from their units;
+   the result carries surviving units (with their damage) back to the galaxy.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, DPR = 1;
+let W=0,H=0,DPR=1;
 function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W * DPR; canvas.height = H * DPR;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(scene===Galaxy) layoutGalaxy();
 }
 window.addEventListener('resize', resize);
 
-/* ── small math helpers ───────────────────────────────────────────── */
+/* ── helpers ──────────────────────────────────────────────────────── */
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const lerp=(a,b,t)=>a+(b-a)*t;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const rand=(a,b)=>a+Math.random()*(b-a);
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 let _id=1; const uid=()=>_id++;
+const $=id=>document.getElementById(id);
 
-/* ── factions ─────────────────────────────────────────────────────── */
-const FAC = {
-  player:{ id:'player', name:'Vanguard',        color:'#3fd0ff', proj:'#bdeeff' },
-  enemy: { id:'enemy',  name:'Crimson Accord',  color:'#ff7a4d', proj:'#ffc7a6' },
+const FAC={
+  player:{id:'player',name:'Vanguard',       color:'#3fd0ff',proj:'#bdeeff'},
+  enemy: {id:'enemy', name:'Crimson Accord', color:'#ff7a4d',proj:'#ffc7a6'},
 };
+const facColor=f=>f==='player'?'#3fd0ff':f==='enemy'?'#ff7a4d':'#8aa0bf';
 
-/* ── unit templates (balance lives here) ──────────────────────────── */
-const TYPES = {
-  fighter:{ label:'Interceptor', radius:8,  hull:28,  speed:178, accel:900,
-            weapons:[{range:150,dmg:4,cd:0.45,pspeed:660}] },
-  frigate:{ label:'Frigate',     radius:15, hull:185, speed:96,  accel:340,
-            weapons:[{range:230,dmg:9,cd:0.85,pspeed:560}] },
-  capital:{ label:'Dreadnought', radius:34, hull:720, speed:42,  accel:160,
+/* ── unit templates (shared by both layers) ──────────────────────── */
+const TYPES={
+  // cheap, fast, fragile — dangerous in numbers, great at flanking hardpoints, weak to point-defense
+  fighter:{ label:'Interceptor', radius:8,  hull:22,  speed:205, accel:1050, power:1,
+            weapons:[{range:150,dmg:4,cd:0.42,pspeed:680}] },
+  // mid-tier line ship: a main gun for big targets + a rapid point-defense gun that shreds fighters
+  frigate:{ label:'Frigate',     radius:15, hull:200, speed:96,  accel:340, power:3,
+            weapons:[
+              {range:235,dmg:10,cd:0.9, pspeed:560},
+              {range:150,dmg:3, cd:0.16,pspeed:720, anti:2.6},   // point-defense (anti-fighter)
+            ] },
+  capital:{ label:'Dreadnought', radius:34, hull:720, speed:42,  accel:160, power:9,
             shield:220, shieldRegen:13, shieldDelay:3,
             hardpoints:[
               {key:'shield', name:'Shield gen', ox:0,   oy:-9, hp:120},
               {key:'wpnL',   name:'Battery L',  ox:-30, oy:-2, hp:90, weapon:{range:265,dmg:12,cd:1.05,pspeed:520}},
               {key:'wpnR',   name:'Battery R',  ox:30,  oy:-2, hp:90, weapon:{range:265,dmg:12,cd:1.05,pspeed:520}},
+              {key:'pd',     name:'Flak turret',ox:0,   oy:-22,hp:70, weapon:{range:165,dmg:3,cd:0.18,pspeed:720,anti:2.6}},
               {key:'engL',   name:'Engine L',   ox:-15, oy:27, hp:75},
               {key:'engR',   name:'Engine R',   ox:15,  oy:27, hp:75},
               {key:'hangar', name:'Hangar',     ox:0,   oy:14, hp:110, spawnEvery:9, cap:4},
             ] },
+  // ── stationary defending structures (tied to a world; never move) ──
+  platform:{ label:'Orbital Platform', radius:46, hull:880, speed:0, accel:0, power:0, structure:true,
+            shield:300, shieldRegen:16, shieldDelay:3,
+            hardpoints:[
+              {key:'shield', name:'Shield gen', ox:0,   oy:-14, hp:160},
+              {key:'wpnL',   name:'Battery L',  ox:-30, oy:-16, hp:110, weapon:{range:300,dmg:14,cd:1.1,pspeed:540}},
+              {key:'wpnR',   name:'Battery R',  ox:30,  oy:-16, hp:110, weapon:{range:300,dmg:14,cd:1.1,pspeed:540}},
+              {key:'pd',     name:'Flak battery',ox:0,  oy:10,  hp:90,  weapon:{range:175,dmg:3,cd:0.14,pspeed:720,anti:2.8}},
+              {key:'hangar', name:'Hangar bay',  ox:-22,oy:20,  hp:120, spawnEvery:8, cap:4},
+            ] },
+  fortress:{ label:'Fortress Station', radius:60, hull:1500, speed:0, accel:0, power:0, structure:true,
+            shield:460, shieldRegen:20, shieldDelay:3,
+            hardpoints:[
+              {key:'shield', name:'Shield gen', ox:0,   oy:-18, hp:230},
+              {key:'wpnL',   name:'Battery L',  ox:-40, oy:-18, hp:140, weapon:{range:320,dmg:16,cd:1.05,pspeed:540}},
+              {key:'wpnR',   name:'Battery R',  ox:40,  oy:-18, hp:140, weapon:{range:320,dmg:16,cd:1.05,pspeed:540}},
+              {key:'wpnC',   name:'Lance',      ox:0,   oy:-40, hp:130, weapon:{range:360,dmg:26,cd:1.9,pspeed:560}},
+              {key:'pdL',    name:'Flak L',     ox:-24, oy:14,  hp:100, weapon:{range:180,dmg:3,cd:0.13,pspeed:730,anti:2.8}},
+              {key:'pdR',    name:'Flak R',     ox:24,  oy:14,  hp:100, weapon:{range:180,dmg:3,cd:0.13,pspeed:730,anti:2.8}},
+              {key:'hangar', name:'Hangar bay', ox:0,   oy:26,  hp:150, spawnEvery:7, cap:5},
+            ] },
 };
+const STATION_OF={ 1:'platform', 2:'fortress' };
+const BUILD={ fighter:{cost:60,time:4}, frigate:{cost:200,time:8}, capital:{cost:650,time:20,needs:'shipyard'} };
+const UPGRADE={ 1:{cost:240,time:10}, 2:{cost:600,time:16} };   // target tier → cost/time
+const STRUCT={                                                   // world structures (one build slot, like ships)
+  refinery:{name:'Refinery', cost:200, time:9},                 // raises this world's income
+  shipyard:{name:'Shipyard', cost:300, time:12},                // unlocks Dreadnought production here
+};
+const REFINERY_MULT=1.75;
+const incomeOf=p=>p.income*(p.refinery?REFINERY_MULT:1);
+const isStructure=u=>!!(TYPES[u.kind]&&TYPES[u.kind].structure);
 
-/* ── game state ───────────────────────────────────────────────────── */
-let units=[], shots=[], fx=[], stars=[];
-let over=false;
-
-function makeUnit(kind, fac, x, y){
-  const t = TYPES[kind];
-  const u = {
-    id:uid(), kind, fac, x, y, vx:0, vy:0, angle:fac==='player'?0:Math.PI,
-    radius:t.radius, maxHull:t.hull, hull:t.hull, speed:t.speed, accel:t.accel,
-    moveTarget:null, attackTarget:null, combatTarget:null, selected:false, dead:false,
-    weapons:null, hardpoints:null, shield:0, shieldMax:0, shieldRegen:0, shieldDelay:0, hitTimer:0,
-  };
-  if(kind==='capital'){
-    u.shieldMax=t.shield; u.shield=t.shield; u.shieldRegen=t.shieldRegen; u.shieldDelay=t.shieldDelay;
-    u.hardpoints = t.hardpoints.map(h=>({
-      ...h, maxHp:h.hp, hp:h.hp, alive:true, cd:0,
-      spawnT:(h.spawnEvery||0)*0.5, children:[]
-    }));
-    // capital weapons come from weapon hardpoints
-    u.weapons = u.hardpoints.filter(h=>h.weapon).map(h=>({...h.weapon, cdMax:h.weapon.cd, cd:0, hp:h}));
-  } else {
-    u.weapons = t.weapons.map(w=>({...w, cdMax:w.cd, cd:0, hp:null}));
-  }
-  return u;
+/* ── persistent unit instances (carry damage between battles) ─────── */
+function makeInstance(kind,fac){
+  const t=TYPES[kind];
+  const inst={id:uid(),kind,fac,maxHull:t.hull,hull:t.hull,shield:t.shield||0,shieldMax:t.shield||0,hardpoints:null};
+  if(t.hardpoints) inst.hardpoints=t.hardpoints.map(h=>({key:h.key,hp:h.hp,maxHp:h.hp,alive:true}));
+  return inst;
 }
-const alive = u => u && !u.dead && u.hull>0;
-const shieldGen = u => u.hardpoints && u.hardpoints.find(h=>h.key==='shield');
-const shieldsUp = u => { const g=shieldGen(u); return g && g.alive && u.shield>0; };
-function engineFactor(u){
-  if(!u.hardpoints) return 1;
-  const e = u.hardpoints.filter(h=>h.key==='engL'||h.key==='engR');
-  const live = e.filter(h=>h.alive).length;
-  return e.length? live/e.length : 1;        // both dead → 0 (immobile)
-}
-const hpWorld = (u,h)=>({x:u.x+h.ox, y:u.y+h.oy});
+const powerOfUnits=arr=>arr.reduce((s,u)=>s+(TYPES[u.kind].power||1),0);
 
-/* ── scenario setup ───────────────────────────────────────────────── */
-function setup(){
-  units=[]; shots=[]; fx=[]; over=false; _id=1;
-  // player fleet (left)
-  units.push(makeUnit('capital','player', 280, H*0.5));
-  units.push(makeUnit('frigate','player', 420, H*0.5-110));
-  units.push(makeUnit('frigate','player', 420, H*0.5+110));
-  for(let i=0;i<4;i++) units.push(makeUnit('fighter','player', 480+i*26, H*0.5-60+i*40));
-  // enemy fleet (right)
-  units.push(makeUnit('capital','enemy', W-280, H*0.5));
-  units.push(makeUnit('frigate','enemy', W-420, H*0.5-110));
-  units.push(makeUnit('frigate','enemy', W-420, H*0.5+110));
-  for(let i=0;i<5;i++) units.push(makeUnit('fighter','enemy', W-490-i*26, H*0.5-80+i*40));
-
-  // center camera on the action
-  cam.x = W*0.5; cam.y = H*0.5; cam.zoom = Math.min(1, W/1500);
-  cam.tx=cam.x; cam.ty=cam.y;
-  selection.clear();
-  document.getElementById('end').classList.remove('on');
-  if(!stars.length) makeStars();
-}
-function makeStars(){
-  stars=[];
-  for(let i=0;i<260;i++) stars.push({
-    x:rand(-600,W+600), y:rand(-600,H+600),
-    r:rand(.4,1.5), d:rand(.25,1), tw:rand(0,6.28)
-  });
+/* ═════════════════════════════════════════════════════════════════════
+   SCENE MANAGER
+   ═══════════════════════════════════════════════════════════════════════ */
+let scene=null;
+function setScene(s){
+  scene=s;
+  // toggle HUD groups
+  const inGal=(s===Galaxy);
+  ['gtop','ghelp','gplanet'].forEach(id=>$(id).classList.toggle('hide',!inGal));
+  ['topleft','help','inspect'].forEach(id=>$(id).classList.toggle('hide',inGal));
+  canvas.style.cursor = inGal?'pointer':'crosshair';
+  if(s.enter) s.enter();
 }
 
-/* ── camera ───────────────────────────────────────────────────────── */
-const cam = {x:0,y:0,tx:0,ty:0,zoom:1};
-function w2s(wx,wy){ return [ (wx-cam.x)*cam.zoom + W/2, (wy-cam.y)*cam.zoom + H/2 ]; }
-function s2w(sx,sy){ return [ (sx-W/2)/cam.zoom + cam.x, (sy-H/2)/cam.zoom + cam.y ]; }
-
-/* ── input ────────────────────────────────────────────────────────── */
-const keys={};
-window.addEventListener('keydown',e=>{
-  keys[e.key.toLowerCase()]=true;
-  if(e.key==='Escape') selection.clear();
-});
-window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+/* shared input → routed to the active scene */
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const f = e.deltaY<0 ? 1.12 : 1/1.12;
-  cam.zoom = clamp(cam.zoom*f, 0.35, 2.4);
-},{passive:false});
+canvas.addEventListener('mousedown',e=>{ if(scene&&scene.onDown) scene.onDown(e); });
+canvas.addEventListener('mousemove',e=>{ if(scene&&scene.onMove) scene.onMove(e); });
+canvas.addEventListener('mouseup',  e=>{ if(scene&&scene.onUp)   scene.onUp(e); });
+canvas.addEventListener('wheel',    e=>{ if(scene&&scene.onWheel) scene.onWheel(e); },{passive:false});
+const keys={};
+window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(scene&&scene.onKey) scene.onKey(e); });
+window.addEventListener('keyup',  e=>{ keys[e.key.toLowerCase()]=false; });
 
-const mouse={x:0,y:0,wx:0,wy:0,down:false,dragging:false,sx:0,sy:0};
-const selection = {
-  set:new Set(),
-  clear(){ this.set.forEach(u=>u.selected=false); this.set.clear(); refreshInspect(); },
-  add(u){ if(u.fac==='player' && alive(u)){ u.selected=true; this.set.add(u);} refreshInspect(); },
-  only(u){ this.clear(); this.add(u); },
-};
+/* ═════════════════════════════════════════════════════════════════════
+   GALAXY SCENE
+   ═══════════════════════════════════════════════════════════════════════ */
+const galaxy={ planets:[], lanes:[], transits:[], credits:{player:0,enemy:0},
+               time:0, selected:null, ended:false, aiBuild:4, aiAttack:8 };
 
-canvas.addEventListener('mousemove',e=>{
-  mouse.x=e.clientX; mouse.y=e.clientY;
-  [mouse.wx,mouse.wy]=s2w(mouse.x,mouse.y);
-});
-canvas.addEventListener('mousedown',e=>{
-  [mouse.wx,mouse.wy]=s2w(e.clientX,e.clientY);
-  if(e.button===0){               // select
-    mouse.down=true; mouse.dragging=false;
-    mouse.sx=e.clientX; mouse.sy=e.clientY;
-  } else if(e.button===2){        // command
-    issueCommand(mouse.wx,mouse.wy, e.shiftKey);
-  }
-});
-canvas.addEventListener('mouseup',e=>{
-  if(e.button!==0) return;
-  const [wx,wy]=s2w(e.clientX,e.clientY);
-  if(mouse.dragging){             // marquee select
-    const [ax,ay]=s2w(Math.min(mouse.sx,e.clientX),Math.min(mouse.sy,e.clientY));
-    const [bx,by]=s2w(Math.max(mouse.sx,e.clientX),Math.max(mouse.sy,e.clientY));
-    if(!e.shiftKey) selection.clear();
-    units.forEach(u=>{ if(u.fac==='player'&&alive(u)&&u.x>=ax&&u.x<=bx&&u.y>=ay&&u.y<=by) selection.add(u); });
-  } else {                        // click select
-    const u = pickUnit(wx,wy,'player');
-    if(u){ e.shiftKey ? selection.add(u) : selection.only(u); }
-    else if(!e.shiftKey) selection.clear();
-  }
-  mouse.down=false; mouse.dragging=false;
-});
+function newGalaxy(){
+  // nx,ny in 0..1 — mapped to screen in layoutGalaxy()
+  const P=(name,nx,ny,owner,income)=>({id:galaxy.planets.length,name,nx,ny,x:0,y:0,owner,
+    income,garrison:{fac:owner,units:[]},build:null,stationTier:0,refinery:false,shipyard:false});
+  galaxy.planets=[
+    P('Helios',  0.10,0.50,'player',6),   // 0 player home
+    P('Tycho',   0.27,0.27,'player',3),   // 1
+    P('Rell',    0.27,0.73,'neutral',3),  // 2
+    P('Drift',   0.50,0.18,'neutral',3),  // 3
+    P('Meridian',0.50,0.50,'neutral',4),  // 4 central hub
+    P('Korr',    0.50,0.82,'neutral',3),  // 5
+    P('Cair',    0.73,0.27,'neutral',3),  // 6
+    P('Vex',     0.73,0.73,'enemy',3),    // 7
+    P('Ashfall', 0.90,0.50,'enemy',6),    // 8 enemy home
+  ];
+  galaxy.lanes=[ [0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[5,7],[6,8],[7,8] ];
+  galaxy.transits=[]; galaxy.credits={player:220,enemy:220};
+  galaxy.time=0; galaxy.selected=null; galaxy.ended=false; galaxy.aiBuild=4; galaxy.aiAttack=8;
 
-function pickUnit(wx,wy,fac){
+  const stock=(p,list)=>{ for(const k of list) p.garrison.units.push(makeInstance(k,p.owner)); };
+  stock(galaxy.planets[0],['capital','frigate','frigate','fighter','fighter','fighter']);
+  stock(galaxy.planets[1],['frigate','fighter','fighter']);
+  stock(galaxy.planets[8],['capital','frigate','frigate','fighter','fighter','fighter']);
+  stock(galaxy.planets[7],['frigate','frigate','fighter','fighter','fighter']);
+  galaxy.planets[0].stationTier=2; galaxy.planets[8].stationTier=2;   // homeworld fortresses
+  galaxy.planets[1].stationTier=1; galaxy.planets[7].stationTier=1;   // forward platforms
+  galaxy.planets[0].shipyard=true; galaxy.planets[8].shipyard=true;   // homeworlds can build capitals
+  layoutGalaxy();
+}
+function layoutGalaxy(){
+  const left=Math.max(110,W*0.08), right=W-Math.max(110,W*0.08);
+  const top=Math.max(130,H*0.16), bot=H-Math.max(150,H*0.18);
+  for(const p of galaxy.planets){ p.x=lerp(left,right,p.nx); p.y=lerp(top,bot,p.ny); }
+}
+const planetAt=(idx)=>galaxy.planets[idx];
+const neighbors=(p)=>galaxy.lanes.filter(l=>l[0]===p.id||l[1]===p.id)
+  .map(l=>planetAt(l[0]===p.id?l[1]:l[0]));
+const linked=(a,b)=>galaxy.lanes.some(l=>(l[0]===a.id&&l[1]===b.id)||(l[0]===b.id&&l[1]===a.id));
+const planetRadius=p=>(p.income>=6?22:16);
+
+function pickPlanet(mx,my){
   let best=null,bd=1e9;
-  for(const u of units){
-    if(!alive(u)) continue;
-    if(fac && u.fac!==fac) continue;
-    const d=dist(wx,wy,u.x,u.y);
-    if(d<u.radius+6 && d<bd){bd=d;best=u;}
-  }
+  for(const p of galaxy.planets){ const d=dist(mx,my,p.x,p.y); if(d<planetRadius(p)+10&&d<bd){bd=d;best=p;} }
   return best;
 }
-function pickHardpoint(wx,wy,fac){
-  let best=null,bd=1e9,owner=null;
-  for(const u of units){
-    if(!alive(u)||!u.hardpoints) continue;
-    if(fac && u.fac!==fac) continue;
-    for(const h of u.hardpoints){
-      if(!h.alive) continue;
-      const p=hpWorld(u,h), d=dist(wx,wy,p.x,p.y);
-      if(d<12 && d<bd){bd=d;best=h;owner=u;}
+function tryBuild(p,fac,kind){
+  if(p.build) return;
+  const b=BUILD[kind];
+  if(b.needs && !p[b.needs]) return;            // e.g. capital needs a shipyard
+  if(galaxy.credits[fac]<b.cost) return;
+  galaxy.credits[fac]-=b.cost;
+  p.build={kind,t:b.time,total:b.time};
+}
+function tryStruct(p,fac,key){
+  if(p.build || p[key]) return;                 // one build slot; can't double-build
+  const s=STRUCT[key];
+  if(galaxy.credits[fac]<s.cost) return;
+  galaxy.credits[fac]-=s.cost;
+  p.build={kind:'struct',struct:key,t:s.time,total:s.time};
+}
+function sendFleet(from,to,fac){
+  if(from.garrison.units.length===0) return;
+  galaxy.transits.push({fac,from:from.id,to:to.id,t:0,units:from.garrison.units});
+  from.garrison={fac:from.owner,units:[]};
+}
+
+const Galaxy={
+  enter(){ galaxy.selected=null; refreshPlanetPanel(); $('end').classList.remove('on'); },
+  onDown(e){
+    const mx=e.clientX,my=e.clientY, p=pickPlanet(mx,my);
+    if(e.button===0){
+      galaxy.selected=(p&&p.owner==='player')?p:null;
+      refreshPlanetPanel();
+    } else if(e.button===2){
+      const s=galaxy.selected;
+      if(s&&p&&p!==s&&linked(s,p)) sendFleet(s,p,'player');
     }
-  }
-  return best?{unit:owner,hp:best}:null;
-}
-
-function issueCommand(wx,wy){
-  if(selection.set.size===0) return;
-  const tgtHp = pickHardpoint(wx,wy,'enemy');     // hardpoint takes priority
-  const tgtUnit = tgtHp ? null : pickUnit(wx,wy,'enemy');
-  selection.set.forEach(u=>{
-    if(!alive(u)) return;
-    if(tgtHp){ u.attackTarget={unit:tgtHp.unit, hp:tgtHp.hp}; u.moveTarget=null; }
-    else if(tgtUnit){ u.attackTarget={unit:tgtUnit, hp:null}; u.moveTarget=null; }
-    else { u.moveTarget={x:wx,y:wy}; u.attackTarget=null; }
-  });
-}
-
-/* ── combat ───────────────────────────────────────────────────────── */
-function nearestEnemy(u, maxR){
-  let best=null,bd=maxR||1e9;
-  for(const o of units){
-    if(!alive(o)||o.fac===u.fac) continue;
-    const d=dist(u.x,u.y,o.x,o.y);
-    if(d<bd){bd=d;best=o;}
-  }
-  return best;
-}
-function maxRange(u){ return Math.max(...u.weapons.map(w=>w.range)); }
-
-function resolveTarget(u){
-  // explicit order first
-  if(u.attackTarget){
-    const t=u.attackTarget;
-    if(alive(t.unit)){
-      if(t.hp && !t.hp.alive) t.hp=null;        // hardpoint gone → fall back to hull
-      return t;
-    }
-    u.attackTarget=null;
-  }
-  // otherwise auto-fire on whatever is in range (hold ground)
-  const e=nearestEnemy(u, maxRange(u)+40);
-  return e?{unit:e,hp:null}:null;
-}
-
-function aimPoint(t){
-  if(t.hp && t.hp.alive) return hpWorld(t.unit,t.hp);
-  return {x:t.unit.x, y:t.unit.y};
-}
-
-function applyDamage(u, dmg, hp){
-  u.hitTimer = u.shieldDelay;
-  // shield generator can be sniped directly (bypasses the bubble) — collapses shields fast
-  if(hp && hp.key==='shield'){
-    hp.hp-=dmg; if(hp.hp<=0) killHardpoint(u,hp);
-    return;
-  }
-  // bubble absorbs everything else while it holds
-  if(shieldsUp(u)){
-    const a=Math.min(u.shield,dmg); u.shield-=a; dmg-=a;
-    if(dmg<=0) return;
-  }
-  if(hp && hp.alive){ hp.hp-=dmg; if(hp.hp<=0) killHardpoint(u,hp); }
-  else { u.hull-=dmg; if(u.hull<=0) killUnit(u); }
-}
-function killHardpoint(u,hp){
-  hp.alive=false; hp.hp=0;
-  if(hp.key==='shield'){ u.shield=0; }          // bubble drops with the generator
-  const p=hpWorld(u,hp); burst(p.x,p.y,u.fac,10,0.5);
-}
-function killUnit(u){
-  u.dead=true; u.hull=0; u.selected=false; selection.set.delete(u);
-  burst(u.x,u.y,u.fac, u.kind==='capital'?60:22, u.kind==='capital'?1.4:0.8);
-}
-
-function fireWeapon(u,w,t){
-  const aim=aimPoint(t);
-  const d=dist(u.x,u.y,aim.x,aim.y);
-  if(d>w.range) return false;
-  const a=Math.atan2(aim.y-u.y, aim.x-u.x);
-  const ox=u.x+Math.cos(a)*(u.radius+3), oy=u.y+Math.sin(a)*(u.radius+3);
-  shots.push({
-    x:ox,y:oy, vx:Math.cos(a)*w.pspeed, vy:Math.sin(a)*w.pspeed,
-    dmg:w.dmg, fac:u.fac, target:t.unit, hp:t.hp, life:1.6,
-    color:FAC[u.fac].proj
-  });
-  return true;
-}
-
-/* ── update ───────────────────────────────────────────────────────── */
-function update(dt){
-  // camera pan
-  const ps = 520/cam.zoom*dt;
-  if(keys['a']||keys['arrowleft'])  cam.x-=ps;
-  if(keys['d']||keys['arrowright']) cam.x+=ps;
-  if(keys['w']||keys['arrowup'])    cam.y-=ps;
-  if(keys['s']||keys['arrowdown'])  cam.y+=ps;
-  // marquee drag detection
-  if(mouse.down && !mouse.dragging && Math.hypot(mouse.x-mouse.sx,mouse.y-mouse.sy)>6) mouse.dragging=true;
-
-  for(const u of units){
-    if(!alive(u)) continue;
-
-    // shields regen
-    if(u.shieldMax>0){
-      u.hitTimer=Math.max(0,u.hitTimer-dt);
-      if(u.hitTimer<=0 && shieldGen(u).alive) u.shield=Math.min(u.shieldMax,u.shield+u.shieldRegen*dt);
-    }
-
-    // enemy AI: pick nearest foe and advance
-    if(u.fac==='enemy' && (!u.attackTarget || !alive(u.attackTarget.unit))){
-      const e=nearestEnemy(u);
-      u.attackTarget = e?{unit:e,hp:null}:null;
-    }
-
-    u.combatTarget = resolveTarget(u);
-    const t=u.combatTarget;
-
-    // movement intent
-    let destX=null,destY=null,stopDist=0;
-    if(u.moveTarget){ destX=u.moveTarget.x; destY=u.moveTarget.y; stopDist=4;
-      if(dist(u.x,u.y,destX,destY)<u.radius+6) u.moveTarget=null;
-    } else if(t){
-      const ap=aimPoint(t), d=dist(u.x,u.y,ap.x,ap.y), keep=maxRange(u)*0.82;
-      if(d>keep){ destX=ap.x; destY=ap.y; stopDist=keep; }   // close in
-    }
-    steer(u, destX, destY, stopDist, dt);
-
-    // weapons
-    if(t){
-      for(const w of u.weapons){
-        if(w.hp && !w.hp.alive) continue;        // dead battery can't fire
-        w.cd-=dt;
-        if(w.cd<=0){ if(fireWeapon(u,w,t)) w.cd=w.cdMax; }
-      }
-    } else {
-      for(const w of u.weapons) w.cd=Math.max(0,w.cd-dt);
-    }
-
-    // hangar spawns fighters
-    if(u.hardpoints) for(const h of u.hardpoints){
-      if(h.key==='hangar' && h.alive && h.spawnEvery){
-        h.spawnT-=dt;
-        h.children=h.children.filter(c=>alive(c));
-        if(h.spawnT<=0 && h.children.length<h.cap){
-          const f=makeUnit('fighter',u.fac, u.x+rand(-30,30), u.y+rand(-30,30));
-          if(u.attackTarget) f.attackTarget={...u.attackTarget};
-          units.push(f); h.children.push(f); h.spawnT=h.spawnEvery;
+  },
+  update(dt){
+    if(galaxy.ended) return;
+    galaxy.time+=dt;
+    // economy
+    for(const p of galaxy.planets) if(p.owner!=='neutral') galaxy.credits[p.owner]+=incomeOf(p)*dt;
+    // build queues
+    for(const p of galaxy.planets){
+      if(p.build){ p.build.t-=dt;
+        if(p.build.t<=0){
+          if(p.build.kind==='upgrade') p.stationTier=p.build.target;
+          else if(p.build.kind==='struct') p[p.build.struct]=true;
+          else { p.garrison.units.push(makeInstance(p.build.kind,p.owner)); p.garrison.fac=p.owner; }
+          p.build=null;
         }
       }
     }
-  }
+    aiTick(dt);
+    // advance fleets
+    const arrived=[];
+    for(const tr of galaxy.transits){
+      const a=planetAt(tr.from),b=planetAt(tr.to),len=Math.max(60,dist(a.x,a.y,b.x,b.y));
+      if(tr.t<1) tr.t=Math.min(1,tr.t+dt*130/len);
+      if(tr.t>=1) arrived.push(tr);
+    }
+    for(const tr of arrived){
+      if(scene!==Galaxy) break;          // a battle launched — resolve the rest next frame
+      resolveArrival(tr);
+    }
+    galaxyCheckEnd();
+  },
+  draw(){ drawGalaxy(); },
+};
 
-  // projectiles
-  for(const s of shots){
-    s.life-=dt;
-    // mild homing so bolts connect on slow targets
-    if(alive(s.target)){
-      const ap = s.hp&&s.hp.alive?hpWorld(s.target,s.hp):{x:s.target.x,y:s.target.y};
-      const want=Math.atan2(ap.y-s.y,ap.x-s.x);
-      const cur=Math.atan2(s.vy,s.vx);
-      let da=want-cur; while(da>Math.PI)da-=6.283; while(da<-Math.PI)da+=6.283;
-      const turn=clamp(da,-3*dt,3*dt);
-      const sp=Math.hypot(s.vx,s.vy), na=cur+turn;
-      s.vx=Math.cos(na)*sp; s.vy=Math.sin(na)*sp;
-      // hit test
-      const hitR = (s.hp&&s.hp.alive)?9:s.target.radius;
-      if(dist(s.x,s.y,ap.x,ap.y)<hitR){
-        applyDamage(s.target,s.dmg,(s.hp&&s.hp.alive)?s.hp:null);
-        spark(s.x,s.y,s.color); s.life=0;
+function aiTick(dt){
+  // build
+  galaxy.aiBuild-=dt;
+  if(galaxy.aiBuild<=0){ galaxy.aiBuild=rand(3,6);
+    const own=galaxy.planets.filter(p=>p.owner==='enemy'&&!p.build);
+    if(own.length){
+      const r=Math.random();
+      const frontier=own.filter(p=>p.stationTier<2 && neighbors(p).some(q=>q.owner!=='enemy'));
+      const noRef=own.filter(p=>!p.refinery), noYard=own.filter(p=>!p.shipyard);
+      if(frontier.length && galaxy.credits.enemy>UPGRADE[1].cost && r<0.22){
+        tryUpgrade(pick(frontier),'enemy');                       // fortify
+      } else if(noRef.length && galaxy.credits.enemy>STRUCT.refinery.cost && r<0.42){
+        tryStruct(pick(noRef),'enemy','refinery');                // grow economy
+      } else if(noYard.length && galaxy.credits.enemy>STRUCT.shipyard.cost && r<0.52){
+        tryStruct(pick(noYard),'enemy','shipyard');               // open capital production
+      } else {
+        const yards=own.filter(p=>p.shipyard);
+        if(galaxy.credits.enemy>700 && yards.length && Math.random()<0.4) tryBuild(pick(yards),'enemy','capital');
+        else tryBuild(pick(own),'enemy', Math.random()<0.5?'frigate':'fighter');
       }
+    }
+  }
+  // attack / expand
+  galaxy.aiAttack-=dt;
+  if(galaxy.aiAttack<=0){ galaxy.aiAttack=rand(7,12);
+    const defPower=q=>powerOfUnits(q.garrison.units)+q.stationTier*7;   // station adds to defense
+    const launchers=galaxy.planets.filter(p=>p.owner==='enemy'&&p.garrison.units.length>=3);
+    for(const p of launchers){
+      const tgts=neighbors(p).filter(q=>q.owner!=='enemy').sort((a,b)=>defPower(a)-defPower(b));
+      if(!tgts.length) continue;
+      const t=tgts[0];
+      if(defPower(t)===0 || powerOfUnits(p.garrison.units)>=defPower(t)*0.8){ sendFleet(p,t,'enemy'); break; }
+    }
+  }
+}
+function resolveArrival(tr){
+  const i=galaxy.transits.indexOf(tr); if(i>=0) galaxy.transits.splice(i,1);
+  const P=planetAt(tr.to);
+  if(P.owner===tr.fac){ P.garrison.units.push(...tr.units); P.garrison.fac=tr.fac; return; }
+  if(P.garrison.units.length>0 || P.stationTier>0){ launchBattle(tr,P); return; }  // garrison or station → fight
+  P.owner=tr.fac; P.garrison={fac:tr.fac,units:tr.units};                          // truly undefended → capture
+}
+function launchBattle(tr,P){
+  const attacker={fac:tr.fac,units:tr.units};
+  const defender={fac:P.garrison.fac,units:P.garrison.units};
+  startBattle(attacker,defender,P,(winnerFac,survivors)=>{
+    if(winnerFac===attacker.fac){ P.owner=attacker.fac; P.garrison={fac:attacker.fac,units:survivors}; P.stationTier=0; P.build=null; } // station smashed
+    else { P.garrison={fac:defender.fac,units:survivors}; }       // defender holds; owner & station unchanged (repairs)
+    setScene(Galaxy);
+    galaxyCheckEnd();
+  });
+}
+function tryUpgrade(p,fac){
+  if(p.build || p.stationTier>=2) return;
+  const target=p.stationTier+1, u=UPGRADE[target];
+  if(galaxy.credits[fac]<u.cost) return;
+  galaxy.credits[fac]-=u.cost;
+  p.build={kind:'upgrade',target,t:u.time,total:u.time};
+}
+function galaxyCheckEnd(){
+  const pHas=galaxy.planets.some(p=>p.owner==='player')||galaxy.transits.some(t=>t.fac==='player');
+  const eHas=galaxy.planets.some(p=>p.owner==='enemy')||galaxy.transits.some(t=>t.fac==='enemy');
+  if(!pHas||!eHas){ galaxy.ended=true; showEnd(pHas,true); }
+}
+
+/* ── galaxy render ────────────────────────────────────────────────── */
+function drawGalaxy(){
+  ctx.fillStyle='#05070e'; ctx.fillRect(0,0,W,H);
+  drawStars(true);
+  // lanes
+  for(const [i,j] of galaxy.lanes){
+    const a=planetAt(i),b=planetAt(j);
+    const hot=galaxy.selected&&(galaxy.selected.id===i||galaxy.selected.id===j);
+    ctx.strokeStyle=hot?'rgba(63,208,255,.45)':'rgba(120,150,200,.14)';
+    ctx.lineWidth=hot?1.6:1; ctx.setLineDash(hot?[]:[5,7]);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // transits
+  for(const tr of galaxy.transits){
+    const a=planetAt(tr.from),b=planetAt(tr.to);
+    const x=lerp(a.x,b.x,tr.t),y=lerp(a.y,b.y,tr.t),ang=Math.atan2(b.y-a.y,b.x-a.x),c=facColor(tr.fac);
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.fillStyle=c; ctx.beginPath(); ctx.moveTo(9,0); ctx.lineTo(-6,5); ctx.lineTo(-6,-5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle=c; ctx.font='10px '+`${getComputedStyle(document.body).fontFamily}`;
+    ctx.textAlign='center'; ctx.fillText('×'+tr.units.length, x, y-10);
+  }
+  // planets
+  for(const p of galaxy.planets){
+    const r=planetRadius(p), c=facColor(p.owner), sel=(galaxy.selected===p);
+    if(sel){ ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(p.x,p.y,r+8,0,6.283); ctx.stroke(); }
+    ctx.fillStyle='rgba(8,14,26,.9)'; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.283); ctx.fill();
+    ctx.strokeStyle=c; ctx.lineWidth=2; ctx.stroke();
+    if(p.income>=6){ ctx.strokeStyle=c; ctx.globalAlpha=.5; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,r-5,0,6.283); ctx.stroke(); ctx.globalAlpha=1; }
+    // station defense ring (tier 1 = thin dashed, tier 2 = double)
+    if(p.stationTier>0){ ctx.strokeStyle=c; ctx.globalAlpha=.55; ctx.lineWidth=1.4; ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.arc(p.x,p.y,r+11,0,6.283); ctx.stroke();
+      if(p.stationTier>1){ ctx.beginPath(); ctx.arc(p.x,p.y,r+14,0,6.283); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.globalAlpha=1; }
+    // build ring
+    if(p.build){ const k=1-p.build.t/p.build.total;
+      ctx.strokeStyle=c; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.arc(p.x,p.y,r+5,-1.57,-1.57+6.283*k); ctx.stroke(); }
+    // labels
+    ctx.fillStyle='#cfe3ff'; ctx.font='12px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign='center'; ctx.fillText(p.name, p.x, p.y+r+16);
+    const n=p.garrison.units.length;
+    if(n){ ctx.fillStyle=c; ctx.font='10px '+getComputedStyle(document.body).fontFamily;
+      ctx.fillText('▮'.repeat(Math.min(n,8))+(n>8?'+':''), p.x, p.y+r+29); }
+    if(p.owner!=='neutral' && (p.refinery||p.shipyard)){
+      const badge=(p.refinery?'⛭ ':'')+(p.shipyard?'⚓':'');
+      ctx.fillStyle='rgba(125,143,176,.9)'; ctx.font='9px '+getComputedStyle(document.body).fontFamily;
+      ctx.fillText(badge.trim(), p.x, p.y+r+(n?40:29)); }
+  }
+  // galaxy HUD text
+  $('gCred').textContent=Math.floor(galaxy.credits.player);
+  $('gClock').textContent=Math.floor(galaxy.time*2)+1;
+  $('gP').textContent=galaxy.planets.filter(p=>p.owner==='player').length;
+  $('gE').textContent=galaxy.planets.filter(p=>p.owner==='enemy').length;
+  if(galaxy.selected) refreshPlanetPanel(true);
+}
+
+function refreshPlanetPanel(live){
+  const panel=$('gplanet'), p=galaxy.selected;
+  if(!p){ panel.classList.remove('on'); return; }
+  panel.classList.add('on');
+  $('gName').textContent=p.name;
+  $('gOwn').textContent=p.income>=6?'Homeworld':'Vanguard world';
+  const eff=incomeOf(p);
+  $('gInc').textContent = p.refinery ? `${Math.round(eff)} / day (refined)` : `${p.income} / day`;
+  $('gGar').textContent=p.garrison.units.length+' ships';
+  $('gStn').textContent=['None','Orbital Platform','Fortress Station'][p.stationTier];
+  const busy=!!p.build, cred=galaxy.credits.player;
+  $('gbuild').querySelectorAll('button').forEach(b=>{
+    const k=b.dataset.kind, bd=BUILD[k];
+    b.disabled = busy || cred<bd.cost || (bd.needs && !p[bd.needs]);   // capital needs a shipyard
+    b.title = (bd.needs && !p[bd.needs]) ? 'Requires a Shipyard' : '';
+  });
+  $('gstruct').querySelectorAll('button').forEach(b=>{
+    const key=b.dataset.struct, have=!!p[key];
+    b.classList.toggle('has',have);
+    b.disabled = have || busy || cred<STRUCT[key].cost;
+    b.firstChild.textContent = have ? (key==='refinery'?'Refinery ✓':'Shipyard ✓') : (key==='refinery'?'Refinery':'Shipyard');
+  });
+  const fort=$('gfortify');
+  if(p.stationTier>=2){ fort.disabled=true; $('gfortc').textContent=''; fort.firstChild.textContent='Station maxed'; }
+  else { const u=UPGRADE[p.stationTier+1];
+    fort.firstChild.textContent = p.stationTier===0?'Build station':'Upgrade station';
+    $('gfortc').textContent=u.cost; fort.disabled = busy || cred<u.cost; }
+  const prog=$('gbprog');
+  if(busy){ prog.classList.remove('hide');
+    $('gbName').textContent =
+      p.build.kind==='upgrade' ? ('→ '+['','Orbital Platform','Fortress Station'][p.build.target]) :
+      p.build.kind==='struct'  ? STRUCT[p.build.struct].name :
+      TYPES[p.build.kind].label;
+    $('gbBar').style.width=((1-p.build.t/p.build.total)*100)+'%'; }
+  else prog.classList.add('hide');
+}
+$('gbuild').addEventListener('click',e=>{
+  const btn=e.target.closest('button'); if(!btn||!galaxy.selected) return;
+  tryBuild(galaxy.selected,'player',btn.dataset.kind); refreshPlanetPanel();
+});
+$('gstruct').addEventListener('click',e=>{
+  const btn=e.target.closest('button'); if(!btn||!galaxy.selected) return;
+  tryStruct(galaxy.selected,'player',btn.dataset.struct); refreshPlanetPanel();
+});
+$('gfortify').addEventListener('click',()=>{
+  if(!galaxy.selected) return; tryUpgrade(galaxy.selected,'player'); refreshPlanetPanel();
+});
+
+/* ═════════════════════════════════════════════════════════════════════
+   BATTLE SCENE  (the tactical slice — built from two fleets)
+   ═══════════════════════════════════════════════════════════════════════ */
+let units=[],shots=[],fx=[],stars=[],over=false;
+let bSideA='player',bSideB='enemy',bAttacker=null,bDefender=null,bPlanet=null,bResolved=null,bResultT=0,bStation=null,bPlanetBack=null;
+const cam={x:0,y:0,zoom:1};
+function w2s(wx,wy){ return [ (wx-cam.x)*cam.zoom+W/2, (wy-cam.y)*cam.zoom+H/2 ]; }
+function s2w(sx,sy){ return [ (sx-W/2)/cam.zoom+cam.x, (sy-H/2)/cam.zoom+cam.y ]; }
+
+function makeUnit(kind,fac,x,y){
+  const t=TYPES[kind];
+  const u={id:uid(),kind,fac,x,y,vx:0,vy:0,angle:fac==='player'?0:Math.PI,
+    radius:t.radius,maxHull:t.hull,hull:t.hull,speed:t.speed,accel:t.accel,
+    moveTarget:null,attackTarget:null,combatTarget:null,selected:false,dead:false,
+    weapons:null,hardpoints:null,shield:0,shieldMax:0,shieldRegen:0,shieldDelay:0,hitTimer:0,src:null};
+  if(t.hardpoints){                         // composite ships + stations
+    if(t.shield){ u.shieldMax=t.shield; u.shield=t.shield; u.shieldRegen=t.shieldRegen; u.shieldDelay=t.shieldDelay; }
+    u.hardpoints=t.hardpoints.map(h=>({...h,maxHp:h.hp,hp:h.hp,alive:true,cd:0,spawnT:(h.spawnEvery||0)*0.5,children:[]}));
+    u.weapons=u.hardpoints.filter(h=>h.weapon).map(h=>({...h.weapon,cdMax:h.weapon.cd,cd:0,hp:h}));
+  } else {
+    u.weapons=t.weapons.map(w=>({...w,cdMax:w.cd,cd:0,hp:null}));
+  }
+  return u;
+}
+function battleUnitFromInstance(inst,x,y){
+  const u=makeUnit(inst.kind,inst.fac,x,y); u.src=inst;
+  u.hull=inst.hull; if(u.shieldMax>0) u.shield=Math.min(inst.shield,u.shieldMax);
+  if(u.hardpoints&&inst.hardpoints){
+    for(const h of u.hardpoints){ const si=inst.hardpoints.find(s=>s.key===h.key);
+      if(si){ h.hp=si.hp; h.alive=si.alive; if(!si.alive) h.hp=0; } }
+    const sg=u.hardpoints.find(h=>h.key==='shield'); if(sg&&!sg.alive) u.shield=0;
+  }
+  return u;
+}
+function carryBack(u){
+  const inst=u.src; if(!inst) return;
+  inst.hull=Math.max(1,Math.round(u.hull)); inst.shield=Math.round(u.shield||0);
+  if(inst.hardpoints&&u.hardpoints) for(const h of u.hardpoints){
+    const si=inst.hardpoints.find(s=>s.key===h.key); if(si){ si.hp=Math.max(0,Math.round(h.hp)); si.alive=h.alive; }
+  }
+}
+
+const alive=u=>u&&!u.dead&&u.hull>0;
+const shieldGen=u=>u.hardpoints&&u.hardpoints.find(h=>h.key==='shield');
+const shieldsUp=u=>{const g=shieldGen(u);return g&&g.alive&&u.shield>0;};
+function engineFactor(u){ if(!u.hardpoints) return 1;
+  const e=u.hardpoints.filter(h=>h.key==='engL'||h.key==='engR'),live=e.filter(h=>h.alive).length;
+  return e.length?live/e.length:1; }
+const hpWorld=(u,h)=>({x:u.x+h.ox,y:u.y+h.oy});
+
+function startBattle(attacker,defender,planet,onResolved){
+  units=[]; shots=[]; fx=[]; over=false; bResultT=0;
+  bAttacker=attacker; bDefender=defender; bPlanet=planet; bResolved=onResolved;
+  bSideA=attacker.fac; bSideB=defender.fac;
+  if(!stars.length) makeStars();
+  const layout=(arr,side)=>{ let i=0;
+    for(const inst of arr){ const col=Math.floor(i/4),row=i%4;
+      const x=W*0.5+side*(W*0.20+col*70), y=H*0.5+(row-1.5)*92;
+      units.push(battleUnitFromInstance(inst,x+rand(-8,8),y+rand(-8,8))); i++; } };
+  layout(attacker.units,-1); layout(defender.units,+1);
+  // defending station (belongs to the planet owner = defender) — stationary, anchored on the defender's flank
+  bStation=null; bPlanetBack=null;
+  if(planet && planet.stationTier>0){
+    const u=makeUnit(STATION_OF[planet.stationTier], defender.fac, W*0.5+W*0.30, H*0.5);
+    units.push(u); bStation=u;
+    bPlanetBack={x:W*0.5+W*0.44, y:H*0.5+H*0.06, r:Math.min(W,H)*0.26, fac:defender.fac};
+  }
+  cam.x=W*0.5; cam.y=H*0.5; cam.zoom=Math.min(0.95,W/1700);
+  const tag = planet ? (planet.stationTier>0?`${planet.name} · ${TYPES[STATION_OF[planet.stationTier]].label}`:planet.name) : 'CONTESTED SYSTEM';
+  $('bWhere').textContent=tag.toUpperCase();
+  selection.clear(); $('end').classList.remove('on');
+  setScene(Battle);
+}
+function battleEnd(winnerFac){
+  if(over) return; over=true; bResultT=0;
+  const playerWon = (winnerFac==='player');
+  $('verdict').textContent=playerWon?'Victory':'Defeat';
+  $('verdict').style.color=playerWon?FAC.player.color:FAC.enemy.color;
+  const atkWon=(winnerFac===bAttacker.fac);
+  $('endnote').textContent = playerWon
+    ? (atkWon?`${bPlanet.name} falls to the Vanguard. Survivors hold the system.`
+            : `You held ${bPlanet.name}. The Crimson assault is broken.`)
+    : (atkWon?`The Crimson Accord takes ${bPlanet.name}.`
+            : `Your assault on ${bPlanet.name} was repulsed.`);
+  $('endbtn').textContent='Return to map';
+  $('end').classList.add('on');
+}
+function finishBattle(){
+  const winnerFac = units.some(u=>u.fac===bSideA&&alive(u))?bSideA:bSideB;
+  const survivors=units.filter(u=>alive(u)&&u.fac===winnerFac&&u.src&&!isStructure(u))
+    .map(u=>{carryBack(u);return u.src;});           // stations aren't fleet ships — they stay with the world
+  const cb=bResolved; bResolved=null;
+  $('end').classList.remove('on');
+  if(cb) cb(winnerFac,survivors);
+}
+
+/* ── battle: selection + commands ────────────────────────────────── */
+const mouse={x:0,y:0,wx:0,wy:0,down:false,dragging:false,sx:0,sy:0};
+const selection={
+  set:new Set(),
+  clear(){ this.set.forEach(u=>u.selected=false); this.set.clear(); refreshInspect(); },
+  add(u){ if(u.fac==='player'&&alive(u)){u.selected=true;this.set.add(u);} refreshInspect(); },
+  only(u){ this.clear(); this.add(u); },
+};
+function pickUnit(wx,wy,fac){ let best=null,bd=1e9;
+  for(const u of units){ if(!alive(u))continue; if(fac&&u.fac!==fac)continue;
+    const d=dist(wx,wy,u.x,u.y); if(d<u.radius+6&&d<bd){bd=d;best=u;} } return best; }
+function pickHardpoint(wx,wy,fac){ let best=null,bd=1e9,owner=null;
+  for(const u of units){ if(!alive(u)||!u.hardpoints)continue; if(fac&&u.fac!==fac)continue;
+    for(const h of u.hardpoints){ if(!h.alive)continue; const p=hpWorld(u,h),d=dist(wx,wy,p.x,p.y);
+      if(d<12&&d<bd){bd=d;best=h;owner=u;} } }
+  return best?{unit:owner,hp:best}:null; }
+function issueCommand(wx,wy){
+  if(selection.set.size===0) return;
+  const tgtHp=pickHardpoint(wx,wy,'enemy'), tgtUnit=tgtHp?null:pickUnit(wx,wy,'enemy');
+  selection.set.forEach(u=>{ if(!alive(u))return;
+    if(tgtHp){u.attackTarget={unit:tgtHp.unit,hp:tgtHp.hp};u.moveTarget=null;}
+    else if(tgtUnit){u.attackTarget={unit:tgtUnit,hp:null};u.moveTarget=null;}
+    else {u.moveTarget={x:wx,y:wy};u.attackTarget=null;} });
+}
+
+const Battle={
+  onDown(e){
+    [mouse.wx,mouse.wy]=s2w(e.clientX,e.clientY);
+    if(e.button===0){ mouse.down=true; mouse.dragging=false; mouse.sx=e.clientX; mouse.sy=e.clientY; }
+    else if(e.button===2){ issueCommand(mouse.wx,mouse.wy); }
+  },
+  onMove(e){ mouse.x=e.clientX; mouse.y=e.clientY; [mouse.wx,mouse.wy]=s2w(mouse.x,mouse.y); },
+  onUp(e){
+    if(e.button!==0) return;
+    const [wx,wy]=s2w(e.clientX,e.clientY);
+    if(mouse.dragging){
+      const [ax,ay]=s2w(Math.min(mouse.sx,e.clientX),Math.min(mouse.sy,e.clientY));
+      const [bx,by]=s2w(Math.max(mouse.sx,e.clientX),Math.max(mouse.sy,e.clientY));
+      if(!e.shiftKey) selection.clear();
+      units.forEach(u=>{ if(u.fac==='player'&&alive(u)&&u.x>=ax&&u.x<=bx&&u.y>=ay&&u.y<=by) selection.add(u); });
+    } else {
+      const u=pickUnit(wx,wy,'player');
+      if(u){ e.shiftKey?selection.add(u):selection.only(u); }
+      else if(!e.shiftKey) selection.clear();
+    }
+    mouse.down=false; mouse.dragging=false;
+  },
+  onWheel(e){ e.preventDefault(); cam.zoom=clamp(cam.zoom*(e.deltaY<0?1.12:1/1.12),0.35,2.4); },
+  onKey(e){ if(e.key==='Escape') selection.clear(); },
+  update(dt){ battleUpdate(dt); },
+  draw(){ battleDraw(); },
+};
+
+/* ── battle: combat ──────────────────────────────────────────────── */
+function nearestEnemy(u,maxR){ let best=null,bd=maxR||1e9;
+  for(const o of units){ if(!alive(o)||o.fac===u.fac)continue; const d=dist(u.x,u.y,o.x,o.y); if(d<bd){bd=d;best=o;} } return best; }
+const maxRange=u=>Math.max(...u.weapons.map(w=>w.range));
+function resolveTarget(u){
+  if(u.attackTarget){ const t=u.attackTarget;
+    if(alive(t.unit)){ if(t.hp&&!t.hp.alive)t.hp=null; return t; } u.attackTarget=null; }
+  const e=nearestEnemy(u,maxRange(u)+40); return e?{unit:e,hp:null}:null;
+}
+const aimPoint=t=>(t.hp&&t.hp.alive)?hpWorld(t.unit,t.hp):{x:t.unit.x,y:t.unit.y};
+function applyDamage(u,dmg,hp){
+  u.hitTimer=u.shieldDelay;
+  if(hp&&hp.key==='shield'){ hp.hp-=dmg; if(hp.hp<=0) killHardpoint(u,hp); return; }
+  if(shieldsUp(u)){ const a=Math.min(u.shield,dmg); u.shield-=a; dmg-=a; if(dmg<=0) return; }
+  if(hp&&hp.alive){ hp.hp-=dmg; if(hp.hp<=0) killHardpoint(u,hp); }
+  else { u.hull-=dmg; if(u.hull<=0) killUnit(u); }
+}
+function killHardpoint(u,hp){ hp.alive=false; hp.hp=0; if(hp.key==='shield') u.shield=0;
+  const p=hpWorld(u,hp); burst(p.x,p.y,u.fac,10,0.5); }
+function killUnit(u){ u.dead=true; u.hull=0; u.selected=false; selection.set.delete(u);
+  burst(u.x,u.y,u.fac,u.kind==='capital'?60:22,u.kind==='capital'?1.4:0.8); }
+function fireWeapon(u,w,t){
+  const aim=aimPoint(t),d=dist(u.x,u.y,aim.x,aim.y); if(d>w.range) return false;
+  const a=Math.atan2(aim.y-u.y,aim.x-u.x),ox=u.x+Math.cos(a)*(u.radius+3),oy=u.y+Math.sin(a)*(u.radius+3);
+  let dmg=w.dmg; if(w.anti && t.unit && t.unit.kind==='fighter') dmg*=w.anti;   // point-defense shreds fighters
+  shots.push({x:ox,y:oy,vx:Math.cos(a)*w.pspeed,vy:Math.sin(a)*w.pspeed,dmg,fac:u.fac,target:t.unit,hp:t.hp,life:1.6,
+    color:w.anti?'#ffe6b0':FAC[u.fac].proj, thin:!!w.anti});
+  return true;
+}
+function battleUpdate(dt){
+  const ps=520/cam.zoom*dt;
+  if(keys['a']||keys['arrowleft']) cam.x-=ps;
+  if(keys['d']||keys['arrowright'])cam.x+=ps;
+  if(keys['w']||keys['arrowup'])   cam.y-=ps;
+  if(keys['s']||keys['arrowdown']) cam.y+=ps;
+  if(mouse.down&&!mouse.dragging&&Math.hypot(mouse.x-mouse.sx,mouse.y-mouse.sy)>6) mouse.dragging=true;
+
+  if(!over) for(const u of units){
+    if(!alive(u)) continue;
+    if(u.shieldMax>0){ u.hitTimer=Math.max(0,u.hitTimer-dt);
+      if(u.hitTimer<=0&&shieldGen(u).alive) u.shield=Math.min(u.shieldMax,u.shield+u.shieldRegen*dt); }
+    if(u.fac!=='player'&&(!u.attackTarget||!alive(u.attackTarget.unit))){
+      const e=nearestEnemy(u); u.attackTarget=e?{unit:e,hp:null}:null; }
+    u.combatTarget=resolveTarget(u); const t=u.combatTarget;
+    let dx=null,dy=null,stop=0;
+    if(u.moveTarget){ dx=u.moveTarget.x; dy=u.moveTarget.y; stop=4; if(dist(u.x,u.y,dx,dy)<u.radius+6) u.moveTarget=null; }
+    else if(t){ const ap=aimPoint(t),d=dist(u.x,u.y,ap.x,ap.y),keep=maxRange(u)*0.82; if(d>keep){dx=ap.x;dy=ap.y;stop=keep;} }
+    steer(u,dx,dy,stop,dt);
+    if(t){ for(const w of u.weapons){ if(w.hp&&!w.hp.alive) continue; w.cd-=dt;
+      if(w.cd<=0){ if(fireWeapon(u,w,t)) w.cd=w.cdMax; } } }
+    else for(const w of u.weapons) w.cd=Math.max(0,w.cd-dt);
+    if(u.hardpoints) for(const h of u.hardpoints){
+      if(h.key==='hangar'&&h.alive&&h.spawnEvery){ h.spawnT-=dt; h.children=h.children.filter(c=>alive(c));
+        if(h.spawnT<=0&&h.children.length<h.cap){ const f=makeUnit('fighter',u.fac,u.x+rand(-30,30),u.y+rand(-30,30));
+          f.src=makeInstance('fighter',u.fac);                 // reinforcements are real units too
+          if(u.attackTarget) f.attackTarget={...u.attackTarget};
+          units.push(f); h.children.push(f); h.spawnT=h.spawnEvery; } }
+    }
+  }
+  // projectiles
+  for(const s of shots){ s.life-=dt;
+    if(alive(s.target)){
+      const ap=s.hp&&s.hp.alive?hpWorld(s.target,s.hp):{x:s.target.x,y:s.target.y};
+      const want=Math.atan2(ap.y-s.y,ap.x-s.x),cur=Math.atan2(s.vy,s.vx);
+      let da=want-cur; while(da>Math.PI)da-=6.283; while(da<-Math.PI)da+=6.283;
+      const turn=clamp(da,-3*dt,3*dt),sp=Math.hypot(s.vx,s.vy),na=cur+turn;
+      s.vx=Math.cos(na)*sp; s.vy=Math.sin(na)*sp;
+      const hitR=(s.hp&&s.hp.alive)?9:s.target.radius;
+      if(dist(s.x,s.y,ap.x,ap.y)<hitR){ applyDamage(s.target,s.dmg,(s.hp&&s.hp.alive)?s.hp:null); spark(s.x,s.y,s.color); s.life=0; }
     }
     s.x+=s.vx*dt; s.y+=s.vy*dt;
   }
   shots=shots.filter(s=>s.life>0);
-
-  // effects
-  for(const e of fx){ e.t+=dt; }
-  fx=fx.filter(e=>e.t<e.life);
-
+  for(const e of fx) e.t+=dt; fx=fx.filter(e=>e.t<e.life);
   units=units.filter(u=>!u.dead);
 
-  // win/lose
-  const pAlive=units.some(u=>u.fac==='player'&&alive(u));
-  const eAlive=units.some(u=>u.fac==='enemy'&&alive(u));
-  if(!over && (!pAlive||!eAlive)) endGame(pAlive);
+  if(!over){
+    const aA=units.some(u=>u.fac===bSideA&&alive(u)), aB=units.some(u=>u.fac===bSideB&&alive(u));
+    if(!aA||!aB) battleEnd(aA?bSideA:bSideB);
+  } else { bResultT+=dt; if(bResultT>6) finishBattle(); }   // auto-return after a beat
 }
-
-/* steering: arrive + separation; capitals obey engine damage */
-function steer(u, destX, destY, stopDist, dt){
-  let ax=0, ay=0;
-  const ef = engineFactor(u);
-  const maxSpd = u.speed * (u.hardpoints? ef : 1);
-  if(destX!==null && maxSpd>1){
-    const dx=destX-u.x, dy=destY-u.y, d=Math.hypot(dx,dy)||1;
-    const slow = d<stopDist+60 ? Math.max(0.04,(d-stopDist)/60) : 1;
-    const tvx=dx/d*maxSpd*slow, tvy=dy/d*maxSpd*slow;
+function steer(u,destX,destY,stopDist,dt){
+  let ax=0,ay=0; const ef=engineFactor(u),maxSpd=u.speed*(u.hardpoints?ef:1);
+  if(destX!==null&&maxSpd>1){ const dx=destX-u.x,dy=destY-u.y,d=Math.hypot(dx,dy)||1;
+    const slow=d<stopDist+60?Math.max(0.04,(d-stopDist)/60):1, tvx=dx/d*maxSpd*slow,tvy=dy/d*maxSpd*slow;
     ax=(tvx-u.vx)*u.accel/maxSpd; ay=(tvy-u.vy)*u.accel/maxSpd;
-  } else {
-    ax=-u.vx*3; ay=-u.vy*3;        // brake to a hold
-  }
-  // separation from nearby allies
-  for(const o of units){
-    if(o===u||!alive(o)||o.fac!==u.fac) continue;
-    const dx=u.x-o.x, dy=u.y-o.y, d=Math.hypot(dx,dy), min=u.radius+o.radius+6;
-    if(d>0 && d<min){ const p=(min-d)/min*220; ax+=dx/d*p; ay+=dy/d*p; }
-  }
-  u.vx+=ax*dt; u.vy+=ay*dt;
-  const sp=Math.hypot(u.vx,u.vy);
+  } else { ax=-u.vx*3; ay=-u.vy*3; }
+  for(const o of units){ if(o===u||!alive(o)||o.fac!==u.fac)continue;
+    const dx=u.x-o.x,dy=u.y-o.y,d=Math.hypot(dx,dy),min=u.radius+o.radius+6;
+    if(d>0&&d<min){ const p=(min-d)/min*220; ax+=dx/d*p; ay+=dy/d*p; } }
+  u.vx+=ax*dt; u.vy+=ay*dt; const sp=Math.hypot(u.vx,u.vy);
   if(sp>maxSpd){ u.vx=u.vx/sp*maxSpd; u.vy=u.vy/sp*maxSpd; }
   u.x+=u.vx*dt; u.y+=u.vy*dt;
-  // facing: fighters/frigates turn to heading; capitals face their target softly
-  if(u.kind!=='capital'){
-    if(sp>4) u.angle=Math.atan2(u.vy,u.vx);
-    else if(u.combatTarget){ const ap=aimPoint(u.combatTarget); u.angle=Math.atan2(ap.y-u.y,ap.x-u.x); }
-  }
+  if(!isStructure(u)){ if(sp>4) u.angle=Math.atan2(u.vy,u.vx);
+    else if(u.combatTarget){ const ap=aimPoint(u.combatTarget); u.angle=Math.atan2(ap.y-u.y,ap.x-u.x); } }
 }
 
 /* ── effects ──────────────────────────────────────────────────────── */
+function makeStars(){ stars=[]; for(let i=0;i<260;i++) stars.push({x:rand(-600,W+600),y:rand(-600,H+600),r:rand(.4,1.5),d:rand(.25,1),tw:rand(0,6.28)}); }
 function burst(x,y,fac,n,life){
   for(let i=0;i<n;i++){ const a=rand(0,6.283),s=rand(20,160*life);
-    fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rand(.3,life),col:FAC[fac].color,r:rand(1,2.6)});}
+    fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rand(.3,life),col:FAC[fac].color,r:rand(1,2.6)}); }
   fx.push({x,y,ring:true,t:0,life:life*0.6,col:FAC[fac].color,r0:6,r1:n*1.6});
 }
 function spark(x,y,c){ for(let i=0;i<4;i++){ const a=rand(0,6.283),s=rand(30,90);
-  fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rand(.12,.3),col:c,r:rand(.8,1.8)});}}
+  fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rand(.12,.3),col:c,r:rand(.8,1.8)}); } }
 
-/* ── render ───────────────────────────────────────────────────────── */
+/* ── battle render ───────────────────────────────────────────────── */
 let tNow=0;
-function draw(){
+function battleDraw(){
   ctx.fillStyle='#05070e'; ctx.fillRect(0,0,W,H);
-  drawStars(); drawGrid();
-
-  // projectiles
+  drawStars(false); drawGrid();
+  if(bPlanetBack){ const [px,py]=w2s(bPlanetBack.x,bPlanetBack.y),pr=bPlanetBack.r*cam.zoom,c=facColor(bPlanetBack.fac);
+    const g=ctx.createRadialGradient(px-pr*0.3,py-pr*0.3,pr*0.1,px,py,pr);
+    g.addColorStop(0,'rgba(20,30,52,.95)'); g.addColorStop(1,'rgba(8,12,22,.95)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(px,py,pr,0,6.283); ctx.fill();
+    ctx.strokeStyle=c; ctx.globalAlpha=.4; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
   ctx.lineCap='round';
-  for(const s of shots){
-    const [sx,sy]=w2s(s.x,s.y); const a=Math.atan2(s.vy,s.vx), len=11*cam.zoom;
-    ctx.strokeStyle=s.color; ctx.lineWidth=2*cam.zoom;
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx-Math.cos(a)*len,sy-Math.sin(a)*len); ctx.stroke();
-  }
-
+  for(const s of shots){ const [sx,sy]=w2s(s.x,s.y),a=Math.atan2(s.vy,s.vx),len=(s.thin?6:11)*cam.zoom;
+    ctx.strokeStyle=s.color; ctx.lineWidth=(s.thin?1.2:2)*cam.zoom; ctx.beginPath();
+    ctx.moveTo(sx,sy); ctx.lineTo(sx-Math.cos(a)*len,sy-Math.sin(a)*len); ctx.stroke(); }
   for(const u of units) if(alive(u)) drawUnit(u);
-
-  // effects on top
-  for(const e of fx){
-    const [sx,sy]=w2s(e.x+(e.vx||0)*e.t, e.y+(e.vy||0)*e.t);
-    const k=1-e.t/e.life;
+  for(const e of fx){ const [sx,sy]=w2s(e.x+(e.vx||0)*e.t,e.y+(e.vy||0)*e.t),k=1-e.t/e.life;
     if(e.ring){ ctx.strokeStyle=e.col; ctx.globalAlpha=k*0.7; ctx.lineWidth=2*cam.zoom;
       ctx.beginPath(); ctx.arc(sx,sy,(lerp(e.r0,e.r1,e.t/e.life))*cam.zoom,0,6.283); ctx.stroke(); ctx.globalAlpha=1; }
-    else { ctx.fillStyle=e.col; ctx.globalAlpha=k;
-      ctx.beginPath(); ctx.arc(sx,sy,e.r*cam.zoom,0,6.283); ctx.fill(); ctx.globalAlpha=1; }
-  }
-
-  // selection marquee
-  if(mouse.dragging){
-    const x=Math.min(mouse.sx,mouse.x), y=Math.min(mouse.sy,mouse.y);
+    else { ctx.fillStyle=e.col; ctx.globalAlpha=k; ctx.beginPath(); ctx.arc(sx,sy,e.r*cam.zoom,0,6.283); ctx.fill(); ctx.globalAlpha=1; } }
+  if(mouse.dragging){ const x=Math.min(mouse.sx,mouse.x),y=Math.min(mouse.sy,mouse.y);
     ctx.fillStyle='rgba(63,208,255,.08)'; ctx.strokeStyle='rgba(63,208,255,.6)'; ctx.lineWidth=1;
     ctx.fillRect(x,y,Math.abs(mouse.x-mouse.sx),Math.abs(mouse.y-mouse.sy));
-    ctx.strokeRect(x,y,Math.abs(mouse.x-mouse.sx),Math.abs(mouse.y-mouse.sy));
-  }
-  // hover hint over enemy hardpoints
+    ctx.strokeRect(x,y,Math.abs(mouse.x-mouse.sx),Math.abs(mouse.y-mouse.sy)); }
   const hov=pickHardpoint(mouse.wx,mouse.wy,'enemy');
   if(hov){ const p=hpWorld(hov.unit,hov.hp),[sx,sy]=w2s(p.x,p.y);
-    ctx.strokeStyle=FAC.enemy.color; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(sx,sy,13*cam.zoom,0,6.283); ctx.stroke();
-  }
+    ctx.strokeStyle=FAC.enemy.color; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(sx,sy,13*cam.zoom,0,6.283); ctx.stroke(); }
+  // battle HUD counts
+  $('pCount').textContent=units.filter(u=>u.fac==='player'&&alive(u)).length;
+  $('eCount').textContent=units.filter(u=>u.fac==='enemy'&&alive(u)).length;
 }
-
 function drawUnit(u){
-  const [sx,sy]=w2s(u.x,u.y), z=cam.zoom, col=FAC[u.fac].color, r=u.radius*z;
-
-  // shield bubble
-  if(shieldsUp(u)){
-    ctx.strokeStyle=col; ctx.globalAlpha=0.16+0.34*(u.shield/u.shieldMax);
-    ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,sy,(u.radius+9)*z,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
-  }
-  // selection bracket
-  if(u.selected){
-    ctx.strokeStyle=col; ctx.lineWidth=1.5; const br=(u.radius+8)*z, g=br*0.55;
-    for(const [dx,dy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
-      ctx.beginPath();
-      ctx.moveTo(sx+dx*br, sy+dy*br-dy*g); ctx.lineTo(sx+dx*br, sy+dy*br); ctx.lineTo(sx+dx*br-dx*g, sy+dy*br);
-      ctx.stroke();
-    }
-  }
-
-  ctx.save(); ctx.translate(sx,sy);
-  if(u.kind!=='capital') ctx.rotate(u.angle+Math.PI/2);
+  const [sx,sy]=w2s(u.x,u.y),z=cam.zoom,col=FAC[u.fac].color,r=u.radius*z;
+  if(shieldsUp(u)){ ctx.strokeStyle=col; ctx.globalAlpha=0.16+0.34*(u.shield/u.shieldMax);
+    ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sx,sy,(u.radius+9)*z,0,6.283); ctx.stroke(); ctx.globalAlpha=1; }
+  if(u.selected){ ctx.strokeStyle=col; ctx.lineWidth=1.5; const br=(u.radius+8)*z,g=br*0.55;
+    for(const [dx,dy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){ ctx.beginPath();
+      ctx.moveTo(sx+dx*br,sy+dy*br-dy*g); ctx.lineTo(sx+dx*br,sy+dy*br); ctx.lineTo(sx+dx*br-dx*g,sy+dy*br); ctx.stroke(); } }
+  ctx.save(); ctx.translate(sx,sy); if(!isStructure(u)) ctx.rotate(u.angle+Math.PI/2);
   ctx.lineWidth=1.5; ctx.strokeStyle=col;
-  if(u.kind==='fighter'){
-    ctx.fillStyle='rgba(8,14,26,.9)';
-    ctx.beginPath(); ctx.moveTo(0,-r*1.3); ctx.lineTo(r,r); ctx.lineTo(0,r*0.5); ctx.lineTo(-r,r); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-  } else if(u.kind==='frigate'){
-    ctx.fillStyle='rgba(8,14,26,.9)';
-    ctx.beginPath(); ctx.moveTo(0,-r*1.25); ctx.lineTo(r*0.7,r); ctx.lineTo(-r*0.7,r); ctx.closePath();
-    ctx.fill(); ctx.stroke();
+  if(u.kind==='fighter'){ ctx.fillStyle='rgba(8,14,26,.9)';
+    ctx.beginPath(); ctx.moveTo(0,-r*1.3); ctx.lineTo(r,r); ctx.lineTo(0,r*0.5); ctx.lineTo(-r,r); ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(u.kind==='frigate'){ ctx.fillStyle='rgba(8,14,26,.9)';
+    ctx.beginPath(); ctx.moveTo(0,-r*1.25); ctx.lineTo(r*0.7,r); ctx.lineTo(-r*0.7,r); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,-r*0.3); ctx.lineTo(0,r*0.6); ctx.stroke();
-  } else {
-    // capital body (drawn unrotated visually but we rotated by angle≈fixed)
-    ctx.fillStyle='rgba(9,15,28,.92)';
-    ctx.beginPath();
-    ctx.moveTo(0,-r*1.15); ctx.lineTo(r*0.62,-r*0.2); ctx.lineTo(r*0.5,r); ctx.lineTo(-r*0.5,r);
-    ctx.lineTo(-r*0.62,-r*0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(u.kind==='capital'){ ctx.fillStyle='rgba(9,15,28,.92)';
+    ctx.beginPath(); ctx.moveTo(0,-r*1.15); ctx.lineTo(r*0.62,-r*0.2); ctx.lineTo(r*0.5,r); ctx.lineTo(-r*0.5,r); ctx.lineTo(-r*0.62,-r*0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.globalAlpha=.5; ctx.beginPath(); ctx.moveTo(0,-r*0.9); ctx.lineTo(0,r*0.8); ctx.stroke(); ctx.globalAlpha=1;
-  }
+  } else { // station: octagonal hull with an inner core ring
+    ctx.fillStyle='rgba(9,15,28,.94)'; ctx.beginPath();
+    for(let i=0;i<8;i++){ const a=Math.PI/8+i*Math.PI/4,px=Math.cos(a)*r,py=Math.sin(a)*r; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha=.6; ctx.beginPath(); ctx.arc(0,0,r*0.5,0,6.283); ctx.stroke(); ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.moveTo(-r,0); ctx.lineTo(r,0); ctx.moveTo(0,-r); ctx.lineTo(0,r); ctx.globalAlpha=.35; ctx.stroke(); ctx.globalAlpha=1; }
   ctx.restore();
-
-  // hardpoints (screen space, no rotation so clicks line up)
-  if(u.hardpoints){
-    for(const h of u.hardpoints){
-      const p=hpWorld(u,h),[hx,hy]=w2s(p.x,p.y); const hr=4.5*z;
-      const live=h.alive, frac=h.hp/h.maxHp;
-      ctx.beginPath();
-      if(h.key==='shield'){ ctx.arc(hx,hy,hr+1,0,6.283); }
-      else { ctx.rect(hx-hr,hy-hr,hr*2,hr*2); }
-      ctx.fillStyle = live ? 'rgba(8,14,26,.95)' : 'rgba(40,46,58,.6)';
-      ctx.fill();
-      ctx.lineWidth=1.4;
-      ctx.strokeStyle = live ? (frac<0.4? '#ffd27a' : col) : 'rgba(120,130,150,.5)';
-      ctx.stroke();
-      if(h.weapon && live){ ctx.fillStyle=col; ctx.beginPath(); ctx.arc(hx,hy,1.4*z,0,6.283); ctx.fill(); }
-    }
-  }
-
-  // hull bar
-  const bw=(u.radius*2)*z, bx=sx-bw/2, by=sy-(u.radius+11)*z;
+  if(u.hardpoints) for(const h of u.hardpoints){
+    const p=hpWorld(u,h),[hx,hy]=w2s(p.x,p.y),hr=4.5*z,live=h.alive,frac=h.hp/h.maxHp;
+    ctx.beginPath(); if(h.key==='shield') ctx.arc(hx,hy,hr+1,0,6.283); else ctx.rect(hx-hr,hy-hr,hr*2,hr*2);
+    ctx.fillStyle=live?'rgba(8,14,26,.95)':'rgba(40,46,58,.6)'; ctx.fill();
+    ctx.lineWidth=1.4; ctx.strokeStyle=live?(frac<0.4?'#ffd27a':col):'rgba(120,130,150,.5)'; ctx.stroke();
+    if(h.weapon&&live){ ctx.fillStyle=col; ctx.beginPath(); ctx.arc(hx,hy,1.4*z,0,6.283); ctx.fill(); } }
+  const bw=(u.radius*2)*z,bx=sx-bw/2,by=sy-(u.radius+11)*z;
   ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(bx,by,bw,3*z);
-  const hf=clamp(u.hull/u.maxHull,0,1);
-  ctx.fillStyle = u.fac==='player'?col:FAC.enemy.color; ctx.fillRect(bx,by,bw*hf,3*z);
+  ctx.fillStyle=col; ctx.fillRect(bx,by,bw*clamp(u.hull/u.maxHull,0,1),3*z);
 }
-
-function drawStars(){
+function drawStars(galaxyMode){
   for(const s of stars){
-    const x=(s.x-cam.x)*s.d*0.6 + W/2,
-          y=(s.y-cam.y)*s.d*0.6 + H/2;
+    const cx=galaxyMode?0:cam.x, cy=galaxyMode?0:cam.y;
+    const x=(s.x-cx)*s.d*0.6+W/2, y=(s.y-cy)*s.d*0.6+H/2;
     const tw=0.6+0.4*Math.sin(tNow*1.5+s.tw);
-    ctx.globalAlpha=s.d*tw*0.8; ctx.fillStyle='#9fb6d8';
-    ctx.fillRect(x,y,s.r,s.r);
+    ctx.globalAlpha=s.d*tw*0.8; ctx.fillStyle='#9fb6d8'; ctx.fillRect(x,y,s.r,s.r);
   }
   ctx.globalAlpha=1;
 }
 function drawGrid(){
   const g=120*cam.zoom; if(g<22) return;
-  const ox=(W/2 - cam.x*cam.zoom)%g, oy=(H/2 - cam.y*cam.zoom)%g;
+  const ox=(W/2-cam.x*cam.zoom)%g, oy=(H/2-cam.y*cam.zoom)%g;
   ctx.strokeStyle='rgba(120,150,200,.05)'; ctx.lineWidth=1; ctx.beginPath();
   for(let x=ox;x<W;x+=g){ ctx.moveTo(x,0); ctx.lineTo(x,H); }
   for(let y=oy;y<H;y+=g){ ctx.moveTo(0,y); ctx.lineTo(W,y); }
   ctx.stroke();
 }
 
-/* ── HUD ──────────────────────────────────────────────────────────── */
-const $=id=>document.getElementById(id);
+/* ── battle inspector HUD ────────────────────────────────────────── */
 function refreshInspect(){
-  const ins=$('inspect');
-  const sel=[...selection.set].filter(alive);
+  const ins=$('inspect'),sel=[...selection.set].filter(alive);
   if(sel.length!==1){ ins.classList.remove('on'); return; }
-  ins.classList.add('on');
-  const u=sel[0];
-  $('iName').textContent = TYPES[u.kind].label;
-  $('iKind').textContent = FAC[u.fac].name;
-  $('iHullN').textContent = `${Math.ceil(u.hull)}/${u.maxHull}`;
-  $('iHull').style.width = clamp(u.hull/u.maxHull,0,1)*100+'%';
-  $('iHull').style.background = FAC[u.fac].color;
+  ins.classList.add('on'); const u=sel[0];
+  $('iName').textContent=TYPES[u.kind].label; $('iKind').textContent=FAC[u.fac].name;
+  $('iHullN').textContent=`${Math.ceil(u.hull)}/${u.maxHull}`;
+  $('iHull').style.width=clamp(u.hull/u.maxHull,0,1)*100+'%'; $('iHull').style.background=FAC[u.fac].color;
   const shRow=$('iShieldRow');
   if(u.shieldMax>0){ shRow.classList.remove('hide');
     $('iShieldN').textContent=`${Math.ceil(u.shield)}/${u.shieldMax}`;
-    $('iShield').style.width=clamp(u.shield/u.shieldMax,0,1)*100+'%';
-  } else shRow.classList.add('hide');
+    $('iShield').style.width=clamp(u.shield/u.shieldMax,0,1)*100+'%'; } else shRow.classList.add('hide');
   const box=$('iHps'); box.innerHTML='';
-  if(u.hardpoints){
-    for(const h of u.hardpoints){
-      const el=document.createElement('div');
-      el.className='hp'+(h.alive?'':' dead');
-      el.innerHTML=`<span class="pip"></span>${h.name}`;
-      box.appendChild(el);
-    }
-  }
+  if(u.hardpoints) for(const h of u.hardpoints){ const el=document.createElement('div');
+    el.className='hp'+(h.alive?'':' dead'); el.innerHTML=`<span class="pip"></span>${h.name}`; box.appendChild(el); }
 }
-function refreshForce(){
-  $('pName').textContent=FAC.player.name; $('eName').textContent=FAC.enemy.name;
-  $('pCount').textContent=units.filter(u=>u.fac==='player'&&alive(u)).length;
-  $('eCount').textContent=units.filter(u=>u.fac==='enemy'&&alive(u)).length;
-}
-function endGame(win){
-  over=true;
-  $('verdict').textContent = win?'Victory':'Defeat';
-  $('verdict').style.color = win?FAC.player.color:FAC.enemy.color;
-  $('endnote').textContent = win
-    ? 'Enemy fleet eliminated. Try dismantling their dreadnought by hardpoint next run.'
-    : 'Your fleet was lost. Focus-fire shield generators, then engines.';
+
+/* ═════════════════════════════════════════════════════════════════════
+   END SCREEN + BOOTSTRAP
+   ═══════════════════════════════════════════════════════════════════════ */
+let galaxyOver=false;
+function showEnd(playerWon,galaxyResult){
+  galaxyOver=true;
+  $('verdict').textContent=playerWon?'Galaxy secured':'Galaxy lost';
+  $('verdict').style.color=playerWon?FAC.player.color:FAC.enemy.color;
+  $('endnote').textContent=playerWon
+    ? 'Every system flies Vanguard colors. Run it back for a fresh campaign?'
+    : 'The Crimson Accord controls the galaxy. Try defending your homeworld harder next time.';
+  $('endbtn').textContent='New campaign';
   $('end').classList.add('on');
 }
-$('replay').addEventListener('click', setup);
+$('endbtn').addEventListener('click',()=>{
+  if(galaxyOver){ galaxyOver=false; startCampaign(); }
+  else if(over){ finishBattle(); }                 // return from a battle
+});
 
-/* ── main loop ────────────────────────────────────────────────────── */
+function startCampaign(){
+  galaxyOver=false; over=false;
+  newGalaxy(); if(!stars.length) makeStars(); setScene(Galaxy);
+}
+
+/* ── master loop ─────────────────────────────────────────────────── */
 let last=performance.now();
 function frame(now){
-  let dt=(now-last)/1000; last=now; tNow=now/1000;
-  dt=Math.min(dt,0.05);                 // clamp big gaps (tab switches)
-  if(!over) update(dt);
-  draw(); refreshForce(); refreshInspect();
+  let dt=(now-last)/1000; last=now; tNow=now/1000; dt=Math.min(dt,0.05);
+  if(scene&&scene.update) scene.update(dt);
+  if(scene&&scene.draw)   scene.draw();
+  if(scene===Battle) refreshInspect();
   requestAnimationFrame(frame);
 }
 
-resize(); setup(); requestAnimationFrame(frame);
+resize(); startCampaign(); requestAnimationFrame(frame);
 </script>
 </body>
 </html>
