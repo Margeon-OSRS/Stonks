@@ -49,20 +49,20 @@
   #gplanet h3 .tag{margin-left:auto;font-size:10px;letter-spacing:.1em;color:var(--faint)}
   #gplanet .stat{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-top:8px}
   #gplanet .stat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
-  #gbuild{margin-top:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  #gbuild{margin-top:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
   #gbuild button{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
     background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
   #gbuild button:hover:not(:disabled){border-color:var(--player);color:var(--player)}
   #gbuild button:disabled{opacity:.32;cursor:default}
   #gbuild button .c{display:block;color:var(--faint);font-size:9px}
   .seclabel{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:11px 0 5px}
-  #gstruct{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  #gstruct button{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
-    background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
+  #gstruct{display:flex;flex-direction:column;gap:6px}
+  #gstruct button{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
+    background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 9px;cursor:pointer;transition:.12s}
   #gstruct button:hover:not(:disabled){border-color:var(--player);color:var(--player)}
   #gstruct button:disabled{opacity:.4;cursor:default}
   #gstruct button.has{border-color:rgba(63,208,255,.5);color:var(--player);opacity:1}
-  #gstruct button .c{display:block;color:var(--faint);font-size:9px}
+  #gstruct button .c{color:var(--faint);font-size:9px}
   #gfortify{width:100%;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink);
     background:rgba(63,208,255,.06);border:1px solid var(--line);border-radius:7px;padding:7px 4px;cursor:pointer;transition:.12s;line-height:1.5}
   #gfortify:hover:not(:disabled){border-color:var(--player);color:var(--player)}
@@ -104,15 +104,15 @@
 <!-- ── GALAXY HUD ─────────────────────────────────────────────── -->
 <div id="gtop" class="hud panel">
   <div class="title">Void Command</div>
-  <div class="sub">GALACTIC SKIRMISH · MILESTONE 3</div>
-  <div class="row"><span>Credits <b id="gCred">0</b></span><span>Day <b id="gClock">1</b></span></div>
+  <div class="sub">GALACTIC SKIRMISH · MILESTONE 5</div>
+  <div class="row"><span>Credits <b id="gCred">0</b></span><span>Net <b id="gNet">+0</b>/day</span><span>Day <b id="gClock">1</b></span></div>
   <div class="force"><span class="dot" style="background:var(--player)"></span><span class="nm">Vanguard worlds</span><span class="ct" id="gP">0</span></div>
   <div class="force"><span class="dot" style="background:var(--enemy)"></span><span class="nm">Crimson worlds</span><span class="ct" id="gE">0</span></div>
 </div>
 <div id="ghelp" class="hud panel">
   <div><b>Click</b> one of your worlds to select it</div>
   <div><span class="k">Right-click a linked world</span> — send its fleet</div>
-  <div><b>Build</b>, <b>develop</b> (refinery/shipyard), or <b>fortify</b> from the world panel</div>
+  <div><b>Build</b>, <b>develop</b>, or <b>fortify</b> from the world panel · fleets cost upkeep</div>
 </div>
 <div id="gplanet" class="hud panel">
   <h3><span id="gName">—</span><span class="tag" id="gOwn"></span></h3>
@@ -122,6 +122,7 @@
   <div class="seclabel">Build</div>
   <div id="gbuild">
     <button data-kind="fighter">Interceptor<span class="c">60</span></button>
+    <button data-kind="bomber">Bomber<span class="c">140</span></button>
     <button data-kind="frigate">Frigate<span class="c">200</span></button>
     <button data-kind="capital">Dreadnought<span class="c">650</span></button>
   </div>
@@ -129,6 +130,7 @@
   <div id="gstruct">
     <button data-struct="refinery">Refinery<span class="c">200</span></button>
     <button data-struct="shipyard">Shipyard<span class="c">300</span></button>
+    <button data-struct="bomberbay">Bomber Bay<span class="c">260</span></button>
   </div>
   <button id="gfortify">Fortify station<span class="c" id="gfortc"></span></button>
   <div id="gbprog" class="hide">Working <b id="gbName"></b><div class="meter"><i id="gbBar"></i></div></div>
@@ -201,16 +203,19 @@ const facColor=f=>f==='player'?'#3fd0ff':f==='enemy'?'#ff7a4d':'#8aa0bf';
 
 /* ── unit templates (shared by both layers) ──────────────────────── */
 const TYPES={
-  // cheap, fast, fragile — dangerous in numbers, great at flanking hardpoints, weak to point-defense
-  fighter:{ label:'Interceptor', radius:8,  hull:22,  speed:205, accel:1050, power:1,
-            weapons:[{range:150,dmg:4,cd:0.42,pspeed:680}] },
-  // mid-tier line ship: a main gun for big targets + a rapid point-defense gun that shreds fighters
-  frigate:{ label:'Frigate',     radius:15, hull:200, speed:96,  accel:340, power:3,
+  // cheap, fast, fragile — a screen against small craft, and good at flanking hardpoints
+  fighter:{ label:'Interceptor', radius:8,  hull:22,  speed:205, accel:1050, power:1, upkeep:0.2, small:true,
+            weapons:[{range:150,dmg:4,cd:0.42,pspeed:680, anti:1.7}] },   // bonus vs small craft (fighters & bombers)
+  // slow, fragile torpedo craft — devastating to capitals & stations, helpless against a screen
+  bomber:{  label:'Bomber',      radius:10, hull:46,  speed:128, accel:560,  power:2, upkeep:0.5, small:true,
+            weapons:[{range:215,dmg:20,cd:1.5,pspeed:440, vsBig:2.3}] },  // torpedoes hammer large targets
+  // mid-tier line ship: a main gun for big targets + a rapid point-defense gun that shreds small craft
+  frigate:{ label:'Frigate',     radius:15, hull:200, speed:96,  accel:340, power:3, upkeep:0.7,
             weapons:[
               {range:235,dmg:10,cd:0.9, pspeed:560},
-              {range:150,dmg:3, cd:0.16,pspeed:720, anti:2.6},   // point-defense (anti-fighter)
+              {range:150,dmg:3, cd:0.16,pspeed:720, anti:2.6},   // point-defense (anti small-craft)
             ] },
-  capital:{ label:'Dreadnought', radius:34, hull:720, speed:42,  accel:160, power:9,
+  capital:{ label:'Dreadnought', radius:34, hull:720, speed:42,  accel:160, power:9, upkeep:3,
             shield:220, shieldRegen:13, shieldDelay:3,
             hardpoints:[
               {key:'shield', name:'Shield gen', ox:0,   oy:-9, hp:120},
@@ -243,12 +248,16 @@ const TYPES={
               {key:'hangar', name:'Hangar bay', ox:0,   oy:26,  hp:150, spawnEvery:7, cap:5},
             ] },
 };
+const isSmall=u=>!!(TYPES[u.kind]&&TYPES[u.kind].small);
+const isBig=u=>u.kind==='capital'||isStructure(u);
 const STATION_OF={ 1:'platform', 2:'fortress' };
-const BUILD={ fighter:{cost:60,time:4}, frigate:{cost:200,time:8}, capital:{cost:650,time:20,needs:'shipyard'} };
+const BUILD={ fighter:{cost:60,time:4}, bomber:{cost:140,time:6,needs:'bomberbay'},
+              frigate:{cost:200,time:8}, capital:{cost:650,time:20,needs:'shipyard'} };
 const UPGRADE={ 1:{cost:240,time:10}, 2:{cost:600,time:16} };   // target tier → cost/time
 const STRUCT={                                                   // world structures (one build slot, like ships)
-  refinery:{name:'Refinery', cost:200, time:9},                 // raises this world's income
-  shipyard:{name:'Shipyard', cost:300, time:12},                // unlocks Dreadnought production here
+  refinery:{name:'Refinery',   cost:200, time:9},               // raises this world's income
+  shipyard:{name:'Shipyard',   cost:300, time:12},              // unlocks Dreadnought production here
+  bomberbay:{name:'Bomber Bay',cost:260, time:10},              // unlocks Bomber production here
 };
 const REFINERY_MULT=1.75;
 const incomeOf=p=>p.income*(p.refinery?REFINERY_MULT:1);
@@ -295,8 +304,8 @@ const galaxy={ planets:[], lanes:[], transits:[], credits:{player:0,enemy:0},
 
 function newGalaxy(){
   // nx,ny in 0..1 — mapped to screen in layoutGalaxy()
-  const P=(name,nx,ny,owner,income)=>({id:galaxy.planets.length,name,nx,ny,x:0,y:0,owner,
-    income,garrison:{fac:owner,units:[]},build:null,stationTier:0,refinery:false,shipyard:false});
+  const P=(name,nx,ny,owner,income)=>({id:0,name,nx,ny,x:0,y:0,owner,
+    income,garrison:{fac:owner,units:[]},build:null,stationTier:0,refinery:false,shipyard:false,bomberbay:false});
   galaxy.planets=[
     P('Helios',  0.10,0.50,'player',6),   // 0 player home
     P('Tycho',   0.27,0.27,'player',3),   // 1
@@ -308,6 +317,7 @@ function newGalaxy(){
     P('Vex',     0.73,0.73,'enemy',3),    // 7
     P('Ashfall', 0.90,0.50,'enemy',6),    // 8 enemy home
   ];
+  galaxy.planets.forEach((p,i)=>p.id=i);   // ids must match lane indices below
   galaxy.lanes=[ [0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[5,7],[6,8],[7,8] ];
   galaxy.transits=[]; galaxy.credits={player:220,enemy:220};
   galaxy.time=0; galaxy.selected=null; galaxy.ended=false; galaxy.aiBuild=4; galaxy.aiAttack=8;
@@ -332,6 +342,11 @@ const neighbors=(p)=>galaxy.lanes.filter(l=>l[0]===p.id||l[1]===p.id)
   .map(l=>planetAt(l[0]===p.id?l[1]:l[0]));
 const linked=(a,b)=>galaxy.lanes.some(l=>(l[0]===a.id&&l[1]===b.id)||(l[0]===b.id&&l[1]===a.id));
 const planetRadius=p=>(p.income>=6?22:16);
+function factionIncome(fac){ let s=0; for(const p of galaxy.planets) if(p.owner===fac) s+=incomeOf(p); return s; }
+function factionUpkeep(fac){ let s=0;                       // every fleet ship draws a little upkeep
+  for(const p of galaxy.planets) for(const u of p.garrison.units) if(u.fac===fac) s+=TYPES[u.kind].upkeep||0;
+  for(const tr of galaxy.transits) if(tr.fac===fac) for(const u of tr.units) s+=TYPES[u.kind].upkeep||0;
+  return s; }
 
 function pickPlanet(mx,my){
   let best=null,bd=1e9;
@@ -374,8 +389,11 @@ const Galaxy={
   update(dt){
     if(galaxy.ended) return;
     galaxy.time+=dt;
-    // economy
-    for(const p of galaxy.planets) if(p.owner!=='neutral') galaxy.credits[p.owner]+=incomeOf(p)*dt;
+    // economy: income from owned worlds minus fleet upkeep (a big fleet eats into your credits)
+    for(const fac of ['player','enemy']){
+      const net = factionIncome(fac) - factionUpkeep(fac);
+      galaxy.credits[fac] = Math.max(0, galaxy.credits[fac] + net*dt);
+    }
     // build queues
     for(const p of galaxy.planets){
       if(p.build){ p.build.t-=dt;
@@ -412,17 +430,20 @@ function aiTick(dt){
     if(own.length){
       const r=Math.random();
       const frontier=own.filter(p=>p.stationTier<2 && neighbors(p).some(q=>q.owner!=='enemy'));
-      const noRef=own.filter(p=>!p.refinery), noYard=own.filter(p=>!p.shipyard);
-      if(frontier.length && galaxy.credits.enemy>UPGRADE[1].cost && r<0.22){
+      const noRef=own.filter(p=>!p.refinery), noYard=own.filter(p=>!p.shipyard), noBay=own.filter(p=>!p.bomberbay);
+      if(frontier.length && galaxy.credits.enemy>UPGRADE[1].cost && r<0.20){
         tryUpgrade(pick(frontier),'enemy');                       // fortify
-      } else if(noRef.length && galaxy.credits.enemy>STRUCT.refinery.cost && r<0.42){
+      } else if(noRef.length && galaxy.credits.enemy>STRUCT.refinery.cost && r<0.40){
         tryStruct(pick(noRef),'enemy','refinery');                // grow economy
-      } else if(noYard.length && galaxy.credits.enemy>STRUCT.shipyard.cost && r<0.52){
+      } else if(noYard.length && galaxy.credits.enemy>STRUCT.shipyard.cost && r<0.50){
         tryStruct(pick(noYard),'enemy','shipyard');               // open capital production
+      } else if(noBay.length && galaxy.credits.enemy>STRUCT.bomberbay.cost && r<0.60){
+        tryStruct(pick(noBay),'enemy','bomberbay');               // open bomber production
       } else {
-        const yards=own.filter(p=>p.shipyard);
-        if(galaxy.credits.enemy>700 && yards.length && Math.random()<0.4) tryBuild(pick(yards),'enemy','capital');
-        else tryBuild(pick(own),'enemy', Math.random()<0.5?'frigate':'fighter');
+        const yards=own.filter(p=>p.shipyard), bays=own.filter(p=>p.bomberbay), q=Math.random();
+        if(galaxy.credits.enemy>700 && yards.length && q<0.3) tryBuild(pick(yards),'enemy','capital');
+        else if(bays.length && q<0.55) tryBuild(pick(bays),'enemy','bomber');     // torpedo punch
+        else tryBuild(pick(own),'enemy', Math.random()<0.5?'frigate':'fighter');  // line + screen
       }
     }
   }
@@ -515,13 +536,16 @@ function drawGalaxy(){
     const n=p.garrison.units.length;
     if(n){ ctx.fillStyle=c; ctx.font='10px '+getComputedStyle(document.body).fontFamily;
       ctx.fillText('▮'.repeat(Math.min(n,8))+(n>8?'+':''), p.x, p.y+r+29); }
-    if(p.owner!=='neutral' && (p.refinery||p.shipyard)){
-      const badge=(p.refinery?'⛭ ':'')+(p.shipyard?'⚓':'');
+    if(p.owner!=='neutral' && (p.refinery||p.shipyard||p.bomberbay)){
+      const badge=(p.refinery?'⛭ ':'')+(p.shipyard?'⚓ ':'')+(p.bomberbay?'⤳':'');
       ctx.fillStyle='rgba(125,143,176,.9)'; ctx.font='9px '+getComputedStyle(document.body).fontFamily;
       ctx.fillText(badge.trim(), p.x, p.y+r+(n?40:29)); }
   }
   // galaxy HUD text
   $('gCred').textContent=Math.floor(galaxy.credits.player);
+  const net=factionIncome('player')-factionUpkeep('player');
+  $('gNet').textContent=(net>=0?'+':'')+net.toFixed(1);
+  $('gNet').style.color = net<0 ? 'var(--enemy)' : 'var(--ink)';
   $('gClock').textContent=Math.floor(galaxy.time*2)+1;
   $('gP').textContent=galaxy.planets.filter(p=>p.owner==='player').length;
   $('gE').textContent=galaxy.planets.filter(p=>p.owner==='enemy').length;
@@ -540,15 +564,15 @@ function refreshPlanetPanel(live){
   $('gStn').textContent=['None','Orbital Platform','Fortress Station'][p.stationTier];
   const busy=!!p.build, cred=galaxy.credits.player;
   $('gbuild').querySelectorAll('button').forEach(b=>{
-    const k=b.dataset.kind, bd=BUILD[k];
-    b.disabled = busy || cred<bd.cost || (bd.needs && !p[bd.needs]);   // capital needs a shipyard
-    b.title = (bd.needs && !p[bd.needs]) ? 'Requires a Shipyard' : '';
+    const k=b.dataset.kind, bd=BUILD[k], locked=bd.needs && !p[bd.needs];
+    b.disabled = busy || cred<bd.cost || locked;
+    b.title = locked ? ('Requires a '+STRUCT[bd.needs].name) : '';
   });
   $('gstruct').querySelectorAll('button').forEach(b=>{
-    const key=b.dataset.struct, have=!!p[key];
+    const key=b.dataset.struct, have=!!p[key], name=STRUCT[key].name;
     b.classList.toggle('has',have);
     b.disabled = have || busy || cred<STRUCT[key].cost;
-    b.firstChild.textContent = have ? (key==='refinery'?'Refinery ✓':'Shipyard ✓') : (key==='refinery'?'Refinery':'Shipyard');
+    b.firstChild.textContent = have ? (name+' ✓') : name;
   });
   const fort=$('gfortify');
   if(p.stationTier>=2){ fort.disabled=true; $('gfortc').textContent=''; fort.firstChild.textContent='Station maxed'; }
@@ -749,9 +773,11 @@ function killUnit(u){ u.dead=true; u.hull=0; u.selected=false; selection.set.del
 function fireWeapon(u,w,t){
   const aim=aimPoint(t),d=dist(u.x,u.y,aim.x,aim.y); if(d>w.range) return false;
   const a=Math.atan2(aim.y-u.y,aim.x-u.x),ox=u.x+Math.cos(a)*(u.radius+3),oy=u.y+Math.sin(a)*(u.radius+3);
-  let dmg=w.dmg; if(w.anti && t.unit && t.unit.kind==='fighter') dmg*=w.anti;   // point-defense shreds fighters
+  let dmg=w.dmg;
+  if(t.unit){ if(w.anti && isSmall(t.unit)) dmg*=w.anti;          // point-defense / interceptor vs small craft
+              if(w.vsBig && isBig(t.unit)) dmg*=w.vsBig; }        // torpedoes vs capitals & stations
   shots.push({x:ox,y:oy,vx:Math.cos(a)*w.pspeed,vy:Math.sin(a)*w.pspeed,dmg,fac:u.fac,target:t.unit,hp:t.hp,life:1.6,
-    color:w.anti?'#ffe6b0':FAC[u.fac].proj, thin:!!w.anti});
+    color:w.anti?'#ffe6b0':(w.vsBig?'#ff9bd0':FAC[u.fac].proj), thin:!!w.anti, heavy:!!w.vsBig});
   return true;
 }
 function battleUpdate(dt){
@@ -843,8 +869,8 @@ function battleDraw(){
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(px,py,pr,0,6.283); ctx.fill();
     ctx.strokeStyle=c; ctx.globalAlpha=.4; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
   ctx.lineCap='round';
-  for(const s of shots){ const [sx,sy]=w2s(s.x,s.y),a=Math.atan2(s.vy,s.vx),len=(s.thin?6:11)*cam.zoom;
-    ctx.strokeStyle=s.color; ctx.lineWidth=(s.thin?1.2:2)*cam.zoom; ctx.beginPath();
+  for(const s of shots){ const [sx,sy]=w2s(s.x,s.y),a=Math.atan2(s.vy,s.vx),len=(s.thin?6:s.heavy?13:11)*cam.zoom;
+    ctx.strokeStyle=s.color; ctx.lineWidth=(s.thin?1.2:s.heavy?3:2)*cam.zoom; ctx.beginPath();
     ctx.moveTo(sx,sy); ctx.lineTo(sx-Math.cos(a)*len,sy-Math.sin(a)*len); ctx.stroke(); }
   for(const u of units) if(alive(u)) drawUnit(u);
   for(const e of fx){ const [sx,sy]=w2s(e.x+(e.vx||0)*e.t,e.y+(e.vy||0)*e.t),k=1-e.t/e.life;
@@ -873,6 +899,9 @@ function drawUnit(u){
   ctx.lineWidth=1.5; ctx.strokeStyle=col;
   if(u.kind==='fighter'){ ctx.fillStyle='rgba(8,14,26,.9)';
     ctx.beginPath(); ctx.moveTo(0,-r*1.3); ctx.lineTo(r,r); ctx.lineTo(0,r*0.5); ctx.lineTo(-r,r); ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else if(u.kind==='bomber'){ ctx.fillStyle='rgba(8,14,26,.9)';   // stubby winged craft with a torpedo belly
+    ctx.beginPath(); ctx.moveTo(0,-r*1.05); ctx.lineTo(r*1.15,r*0.35); ctx.lineTo(r*0.45,r); ctx.lineTo(-r*0.45,r); ctx.lineTo(-r*1.15,r*0.35); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,r*0.45,r*0.28,0,6.283); ctx.fill();
   } else if(u.kind==='frigate'){ ctx.fillStyle='rgba(8,14,26,.9)';
     ctx.beginPath(); ctx.moveTo(0,-r*1.25); ctx.lineTo(r*0.7,r); ctx.lineTo(-r*0.7,r); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,-r*0.3); ctx.lineTo(0,r*0.6); ctx.stroke();
